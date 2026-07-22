@@ -1,30 +1,111 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAsync } from "../hooks/useAsync";
 import { exportMetadataSummary, exportModuleAsZip } from "../lib/exportLibrary";
-import { findModuleById, getModuleExportData } from "../lib/libraryRepository";
+import { getModuleExportData } from "../lib/libraryRepository";
+import type { ArtifactType, CourseImage } from "../types/domain";
 
-const shelves = [
-  ["Synthèses", "Le cours complet, structuré", "syntheses"],
-  ["Fiches de révision", "L'essentiel sur une page", "fiches"],
-  ["Fiches images", "À afficher, à mémoriser", "images"],
-  ["Transcriptions", "Archive · le verbatim corrigé", "transcriptions"],
-] as const;
+type ShelfKey = "syntheses" | "fiches" | "images" | "transcriptions";
+
+const shelves: Array<{
+  key: ShelfKey;
+  title: string;
+  description: string;
+  artifactType?: ArtifactType;
+  archive?: boolean;
+}> = [
+  {
+    key: "syntheses",
+    title: "Synthèses",
+    description: "Le cours complet, structuré",
+    artifactType: "synthese",
+  },
+  {
+    key: "fiches",
+    title: "Fiches de révision",
+    description: "L'essentiel sur une page",
+    artifactType: "fiche",
+  },
+  {
+    key: "images",
+    title: "Fiches images",
+    description: "À afficher, à mémoriser",
+  },
+  {
+    key: "transcriptions",
+    title: "Transcriptions",
+    description: "Archive · le verbatim corrigé",
+    artifactType: "transcription_corrigee",
+    archive: true,
+  },
+];
+
+function imageStatus(images: CourseImage[]) {
+  const total = images.length;
+  const pending = images.filter((image) => !image.verification.faite).length;
+  const conformes = images.filter(
+    (image) => image.verification.faite && image.verification.conforme,
+  ).length;
+  const corrections = images.filter(
+    (image) => image.verification.faite && !image.verification.conforme,
+  ).length;
+
+  if (total === 0) {
+    return "Aucune fiche image déposée";
+  }
+
+  const parts = [
+    pending ? `${pending} à vérifier` : "",
+    conformes ? `${conformes} conforme${conformes > 1 ? "s" : ""}` : "",
+    corrections ? `${corrections} à corriger` : "",
+  ].filter(Boolean);
+
+  return parts.join(" · ");
+}
 
 export function ModulePage() {
   const { moduleId } = useParams();
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const loadModule = useCallback(
-    () => (moduleId ? findModuleById(moduleId) : Promise.resolve(null)),
+    () => (moduleId ? getModuleExportData(moduleId) : Promise.resolve(null)),
     [moduleId],
   );
   const { data, error, loading } = useAsync(loadModule);
-  const module = data?.module;
-  const professor = data?.professor;
+  const counts = useMemo(() => {
+    const next: Record<ShelfKey, number> = {
+      syntheses: 0,
+      fiches: 0,
+      images: 0,
+      transcriptions: 0,
+    };
+
+    for (const item of data?.courses ?? []) {
+      if (item.artifacts.some((artifact) => artifact.type === "synthese")) {
+        next.syntheses += 1;
+      }
+      if (item.artifacts.some((artifact) => artifact.type === "fiche")) {
+        next.fiches += 1;
+      }
+      if (
+        item.artifacts.some(
+          (artifact) => artifact.type === "transcription_corrigee",
+        )
+      ) {
+        next.transcriptions += 1;
+      }
+      next.images += item.images.length;
+    }
+
+    return next;
+  }, [data?.courses]);
+  const allImages = useMemo(
+    () => (data?.courses ?? []).flatMap((item) => item.images),
+    [data?.courses],
+  );
 
   async function handleExportModule() {
-    if (!moduleId) {
+    if (!data) {
       return;
     }
 
@@ -32,11 +113,7 @@ export function ModulePage() {
     setExportError(null);
 
     try {
-      const exportData = await getModuleExportData(moduleId);
-      if (!exportData) {
-        throw new Error("Module introuvable pour l'export.");
-      }
-      await exportModuleAsZip(exportData);
+      await exportModuleAsZip(data);
     } catch (reason) {
       setExportError(
         reason instanceof Error
@@ -51,10 +128,10 @@ export function ModulePage() {
   return (
     <section className="stack">
       <div>
-        <h1 className="page-title">{module?.nom ?? "Module"}</h1>
+        <h1 className="page-title">{data?.module.nom ?? "Module"}</h1>
         <p className="lede">
-          {professor && module
-            ? `${professor.nom} · #${module.slug} · ${module.compteurCours} cours`
+          {data
+            ? `${data.professor.nom} · #${data.module.slug} · ${data.module.compteurCours} cours`
             : "Chargement du module..."}
         </p>
       </div>
@@ -69,7 +146,7 @@ export function ModulePage() {
         </div>
       ) : null}
 
-      {!loading && !error && !module ? (
+      {!loading && !error && !data ? (
         <div className="empty-state">
           <p className="eyebrow">Module</p>
           <h2>Introuvable</h2>
@@ -77,20 +154,24 @@ export function ModulePage() {
         </div>
       ) : null}
 
-      {module ? (
+      {data ? (
         <>
           <div className="shelf-grid">
-            {shelves.map(([title, description, path], index) => (
+            {shelves.map((shelf) => (
               <Link
                 className={
-                  index === 3 ? "shelf-card shelf-card--archive" : "shelf-card"
+                  shelf.archive ? "shelf-card shelf-card--archive" : "shelf-card"
                 }
-                key={path}
-                to={`/modules/${module.id}/${path}`}
+                key={shelf.key}
+                to={`/modules/${data.module.id}/${shelf.key}`}
               >
-                <span className="shelf-card__count">0</span>
-                <strong>{title}</strong>
-                <small>{description}</small>
+                <span className="shelf-card__count">{counts[shelf.key]}</span>
+                <strong>{shelf.title}</strong>
+                <small>
+                  {shelf.key === "images"
+                    ? imageStatus(allImages)
+                    : shelf.description}
+                </small>
               </Link>
             ))}
           </div>
@@ -115,11 +196,9 @@ export function ModulePage() {
             </div>
           ) : null}
 
-          {professor && module ? (
-            <p className="export-hint">
-              Archive ZIP · {exportMetadataSummary({ professor, module })}
-            </p>
-          ) : null}
+          <p className="export-hint">
+            Archive ZIP · {exportMetadataSummary(data)}
+          </p>
         </>
       ) : null}
     </section>

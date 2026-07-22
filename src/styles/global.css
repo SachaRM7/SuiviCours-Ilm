@@ -783,6 +783,29 @@ textarea {
   padding: 9px 11px;
 }
 
+.thumb-status {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 7px;
+  border-radius: var(--radius-pill);
+  background: var(--cream-deep);
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+  padding: 3px 8px;
+}
+
+.thumb-status--ok {
+  background: rgba(24, 53, 45, 0.1);
+  color: var(--green);
+}
+
+.thumb-status--alert {
+  background: rgba(107, 43, 54, 0.1);
+  color: var(--bordeaux);
+}
+
 .doc-head {
   border-bottom: 1px solid var(--cream-deep);
   padding-bottom: 18px;

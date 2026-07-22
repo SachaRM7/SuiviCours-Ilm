@@ -48,6 +48,24 @@ function normalize(value: string) {
     .toLowerCase();
 }
 
+function imageVerificationLabel(image: LibraryImage["image"]) {
+  if (!image.verification.faite) {
+    return "À vérifier";
+  }
+
+  return image.verification.conforme ? "Conforme" : "À corriger";
+}
+
+function imageVerificationClass(image: LibraryImage["image"]) {
+  if (!image.verification.faite) {
+    return "thumb-status";
+  }
+
+  return image.verification.conforme
+    ? "thumb-status thumb-status--ok"
+    : "thumb-status thumb-status--alert";
+}
+
 export function DocumentListPage() {
   const { moduleId, rayon = "syntheses" } = useParams();
   const config = rayonConfig[rayon] ?? rayonConfig.syntheses;
@@ -193,6 +211,9 @@ export function DocumentListPage() {
               <span className="thumb__caption">
                 <strong>{course.titre || `Cours ${course.numero}`}</strong>
                 <small>{formatDate(course.date)}</small>
+                <em className={imageVerificationClass(image)}>
+                  {imageVerificationLabel(image)}
+                </em>
               </span>
             </Link>
           ))}
