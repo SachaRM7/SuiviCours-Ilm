@@ -2,7 +2,10 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { AppShell } from "./AppShell";
 import { AuthGate } from "../features/auth/AuthGate";
 import { LoginPage } from "../features/auth/LoginPage";
+import { DocumentListPage } from "../pages/DocumentListPage";
+import { DocumentReadPage } from "../pages/DocumentReadPage";
 import { HomePage } from "../pages/HomePage";
+import { ImageViewerPage } from "../pages/ImageViewerPage";
 import { ModulePage } from "../pages/ModulePage";
 import { PlaceholderPage } from "../pages/PlaceholderPage";
 
@@ -20,30 +23,15 @@ export function App() {
       >
         <Route index element={<HomePage />} />
         <Route path="modules/:moduleId" element={<ModulePage />} />
-        <Route
-          path="modules/:moduleId/:rayon"
-          element={
-            <PlaceholderPage
-              title="Rayon"
-              description="Les listes de documents arrivent au Lot 3."
-            />
-          }
-        />
-        <Route
-          path="cours/:courseId"
-          element={
-            <PlaceholderPage
-              title="Lecture"
-              description="La lecture markdown arrive avec la bibliothèque."
-            />
-          }
-        />
+        <Route path="modules/:moduleId/:rayon" element={<DocumentListPage />} />
+        <Route path="cours/:courseId/:type" element={<DocumentReadPage />} />
+        <Route path="images/:courseId/:imageId" element={<ImageViewerPage />} />
         <Route
           path="nouveau-cours"
           element={
             <PlaceholderPage
               title="Nouveau cours"
-              description="La création guidée arrive au Lot 2."
+              description="La création guidée arrive au prochain lot."
             />
           }
         />

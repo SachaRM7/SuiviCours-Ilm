@@ -119,6 +119,137 @@ const professorSeeds = [
   },
 ];
 
+const sampleCourse = {
+  path: "professeurs/hatim-al-maliki/modules/tawhid/cours/tawhid-14",
+  data: {
+    professeurId: "hatim-al-maliki",
+    moduleId: "tawhid",
+    numero: 14,
+    titre: "Les trois degrés de l'Irjā'",
+    titreValide: true,
+    date: "2026-07-18T20:30:00",
+    audioUrl: null,
+    etapes: {
+      transcription: { fait: true, date: "2026-07-18T22:14:00", obsolete: false },
+      correction: { fait: true, date: "2026-07-18T22:42:00", obsolete: false },
+      synthese: { fait: true, date: "2026-07-19T09:10:00", obsolete: false },
+      sources: { fait: false, date: null, obsolete: false },
+      fiche: { fait: true, date: "2026-07-19T10:20:00", obsolete: false },
+      image: { fait: true, date: "2026-07-19T10:45:00", obsolete: false },
+    },
+    createdAt: "2026-07-18T22:14:00",
+    updatedAt: "2026-07-19T10:45:00",
+  },
+};
+
+const sampleArtifacts = [
+  {
+    id: "synthese",
+    type: "synthese",
+    version: 1,
+    createdAt: "2026-07-19T09:10:00",
+    contenu: `# Les trois degrés de l'Irjā'
+
+## Résumé introductif
+
+Le Cheikh part d'un constat : la catastrophe n'est pas que l'islām nous échappe, mais de croire le comprendre et le posséder alors qu'on ne l'a pas. De cette compréhension illusoire naît l'Irjā' : réduire la foi à ce qu'il y a dans le cœur en la déconnectant des actes.
+
+Le cours retrace la diffusion de cette dérive en trois degrés successifs : théologique, spirituel, puis culturel.
+
+## 1. Préalable méthodologique
+
+Avec l'ignorant, pas de discussion possible : son ignorance tient lieu de savoir. D'où le premier élément de la science du débat : le *Taḥrīr maḥall al-nizāʿ*.
+
+تحرير محل النزاع
+
+> Expliquer l'évident est déjà une humiliation — pour celui qui explique comme pour celui qui demande.
+
+## 2. Séquence historique
+
+| Degré | Époque | Nature |
+|---|---|---|
+| Théologique | 2e siècle de l'hégire | Débat théorique d'une minorité de savants |
+| Spirituel | À partir du 5e siècle | Conversions massives avec import d'anciens réflexes |
+| Culturel | Aujourd'hui | La minimisation du péché devient la règle de base |
+
+## Hadith fondateur
+
+مَنْ قَالَ لَا إِلَهَ إِلَّا اللهُ خَالِصًا مِنْ قَلْبِهِ دَخَلَ الْجَنَّةَ
+
+« Celui qui dit lā ilāha illā Allāh sincèrement de son cœur entrera au paradis. »
+
+Source non précisée dans le cours.
+
+## Points de définition
+
+| Terme | Graphie | Glose |
+|---|---|---|
+| Irjā' | إرجاء | Foi réduite au cœur, coupée des actes |
+| Al-ʿUjb | العجب | Auto-satisfaction ; branche du Shirk |
+| Taḥrīr maḥall al-nizāʿ | تحرير محل النزاع | Délimiter le point de litige |
+`,
+  },
+  {
+    id: "fiche",
+    type: "fiche",
+    version: 1,
+    createdAt: "2026-07-19T10:20:00",
+    contenu: `# Irjā' : trois degrés
+
+**Thèse.** L'Irjā' commence quand la foi est imaginée comme une réalité intérieure séparée des actes.
+
+1. Délimiter le désaccord avant de discuter.
+2. Comprendre la racine théologique.
+3. Observer le glissement spirituel.
+4. Identifier la forme culturelle contemporaine.
+5. Ne pas confondre espoir en Allah et minimisation du péché.
+
+> Expliquer l'évident est déjà une humiliation.
+
+## Termes-clés
+
+| Terme | Graphie | Glose |
+|---|---|---|
+| Irjā' | إرجاء | Foi séparée des actes |
+| Taḥrīr | تحرير | Délimitation précise |
+`,
+  },
+  {
+    id: "transcription_corrigee",
+    type: "transcription_corrigee",
+    version: 1,
+    createdAt: "2026-07-18T22:42:00",
+    contenu: `# Transcription corrigée
+
+Aujourd'hui on va parler d'une maladie ancienne, mais qui a pris plusieurs formes. La première chose, avant de débattre, c'est de savoir exactement sur quoi porte le désaccord.
+
+Le Cheikh insiste ensuite sur le fait que l'Irjā' n'est pas seulement une idée abstraite. C'est une manière de parler de la foi qui finit par diminuer le poids des actes.
+`,
+  },
+  {
+    id: "prompt_image",
+    type: "prompt_image",
+    version: 1,
+    createdAt: "2026-07-19T10:40:00",
+    contenu:
+      "Une fiche de mémorisation au format A4 portrait, sobre, hiérarchisée, élégante, fond Nūr Cream #F9F4EF, titres Mihrab Green #18352D, accents Tibyān Gold #AC8F65, sans représentation figurative.",
+  },
+];
+
+const sampleImage = {
+  id: "image-1",
+  url: "",
+  promptUtilise: sampleArtifacts.find((artifact) => artifact.id === "prompt_image")
+    .contenu,
+  verification: {
+    faite: false,
+    conforme: false,
+    defauts: [],
+  },
+  ordre: 1,
+  createdAt: "2026-07-19T10:45:00",
+};
+
 function firestoreValue(value) {
   if (value === null) {
     return { nullValue: null };
@@ -260,6 +391,31 @@ async function main() {
       }),
     );
   }
+
+  writes.push(
+    updateWrite(env.VITE_FIREBASE_PROJECT_ID, sampleCourse.path, {
+      ...sampleCourse.data,
+      seededAt,
+    }),
+  );
+
+  for (const artifact of sampleArtifacts) {
+    writes.push(
+      updateWrite(
+        env.VITE_FIREBASE_PROJECT_ID,
+        `${sampleCourse.path}/artefacts/${artifact.id}`,
+        { ...artifact, seededAt },
+      ),
+    );
+  }
+
+  writes.push(
+    updateWrite(
+      env.VITE_FIREBASE_PROJECT_ID,
+      `${sampleCourse.path}/images/${sampleImage.id}`,
+      { ...sampleImage, seededAt },
+    ),
+  );
 
   await commitFirestore(env, token, writes);
   console.log("Seed complete: professors, modules, slugs, and prompts are ready.");

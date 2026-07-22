@@ -99,6 +99,26 @@ export type CourseImage = {
   createdAt: string;
 };
 
+export type LibraryDocumentType =
+  | "synthese"
+  | "fiche"
+  | "transcription_corrigee"
+  | "prompt_image";
+
+export type LibraryDocument = {
+  course: Course;
+  artifact: Artifact;
+  module: CourseModule;
+  professor: Professor;
+};
+
+export type LibraryImage = {
+  course: Course;
+  image: CourseImage;
+  module: CourseModule;
+  professor: Professor;
+};
+
 export type VocabularyEntry = {
   id: string;
   cle: string;
