@@ -1,7 +1,10 @@
 import {
   collection,
+  doc,
   getDocs,
+  orderBy,
   query,
+  updateDoc,
   where,
   type DocumentData,
   type QueryDocumentSnapshot,
@@ -44,6 +47,35 @@ export async function getActivePrompt(
       .map(promptFromDoc)
       .sort((left, right) => right.version - left.version)[0] ?? null
   );
+}
+
+export async function listPromptTemplates() {
+  const snapshot = await getDocs(
+    query(collection(db, "prompts"), orderBy("etape", "asc")),
+  );
+
+  return snapshot.docs
+    .map(promptFromDoc)
+    .sort((left, right) => {
+      if (left.etape === right.etape) {
+        return right.version - left.version;
+      }
+
+      return left.etape.localeCompare(right.etape);
+    });
+}
+
+export async function updatePromptTemplate(input: {
+  promptId: string;
+  titre: string;
+  template: string;
+  actif: boolean;
+}) {
+  await updateDoc(doc(db, "prompts", input.promptId), {
+    titre: input.titre,
+    template: input.template,
+    actif: input.actif,
+  });
 }
 
 async function getVocabularyForModule(moduleId: string) {

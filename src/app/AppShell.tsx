@@ -5,6 +5,7 @@ const sectionLabel: Record<string, string> = {
   "/": "Cours",
   "/nouveau-cours": "Nouveau cours",
   "/vocabulaire": "Vocabulaire",
+  "/prompts": "Prompts",
 };
 
 export function AppShell() {
@@ -22,6 +23,7 @@ export function AppShell() {
           <nav className="main-nav" aria-label="Navigation principale">
             <NavLink to="/">Cours</NavLink>
             <NavLink to="/vocabulaire">Vocabulaire</NavLink>
+            <NavLink to="/prompts">Prompts</NavLink>
             <NavLink to="/nouveau-cours">Nouveau</NavLink>
           </nav>
         </div>

@@ -113,13 +113,21 @@ export function DocumentListPage() {
       return [];
     }
 
-    return (data as LibraryImage[]).sort((left, right) =>
-      sort === "numero"
-        ? left.course.numero - right.course.numero
-        : new Date(right.course.date).getTime() -
-          new Date(left.course.date).getTime(),
-    );
-  }, [config.images, data, sort]);
+    const queryText = normalize(search);
+    return (data as LibraryImage[])
+      .filter(({ course, image }) => {
+        const haystack = normalize(
+          `${course.titre} ${image.promptUtilise} ${imageVerificationLabel(image)}`,
+        );
+        return haystack.includes(queryText);
+      })
+      .sort((left, right) =>
+        sort === "numero"
+          ? left.course.numero - right.course.numero
+          : new Date(right.course.date).getTime() -
+            new Date(left.course.date).getTime(),
+      );
+  }, [config.images, data, search, sort]);
 
   const count = config.images ? images.length : filteredDocuments.length;
 
@@ -132,14 +140,12 @@ export function DocumentListPage() {
         </p>
       </div>
 
-      {!config.images ? (
-        <input
-          className="search"
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder={`Chercher dans les ${config.title.toLowerCase()}...`}
-          value={search}
-        />
-      ) : null}
+      <input
+        className="search"
+        onChange={(event) => setSearch(event.target.value)}
+        placeholder={`Chercher dans les ${config.title.toLowerCase()}...`}
+        value={search}
+      />
 
       <div className="tools">
         <button

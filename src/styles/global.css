@@ -1265,6 +1265,27 @@ textarea {
   padding: 16px;
 }
 
+.viewer-check--done {
+  border-color: rgba(172, 143, 101, 0.55);
+  background: rgba(172, 143, 101, 0.12);
+}
+
+.viewer-check--done h2::before {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 9px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 0 5px rgba(172, 143, 101, 0.12);
+  vertical-align: 2px;
+}
+
+.viewer-check--empty {
+  border-style: dashed;
+}
+
 .viewer-check__head {
   display: flex;
   align-items: flex-start;
@@ -1436,6 +1457,100 @@ textarea {
   justify-content: flex-end;
   gap: 6px;
   max-width: 260px;
+}
+
+.prompt-admin {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.prompt-list {
+  overflow: hidden;
+  border: 1px solid var(--cream-deep);
+  border-radius: var(--radius-card);
+  background: var(--white);
+}
+
+.prompt-list__item {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--cream-deep);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 13px 15px;
+  text-align: left;
+}
+
+.prompt-list__item:last-child {
+  border-bottom: 0;
+}
+
+.prompt-list__item:hover {
+  background: var(--cream);
+}
+
+.prompt-list__item--active {
+  background: var(--green);
+  color: var(--cream);
+}
+
+.prompt-list__item strong,
+.prompt-list__item span {
+  display: block;
+}
+
+.prompt-list__item strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.prompt-list__item span {
+  color: var(--ink-soft);
+  font-size: 12px;
+  margin-top: 2px;
+}
+
+.prompt-list__item--active span {
+  color: var(--gold-pale);
+}
+
+.prompt-editor {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--cream-deep);
+  border-radius: var(--radius-card);
+  background: var(--white);
+  padding: 18px;
+}
+
+.prompt-editor__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.prompt-editor__top .field {
+  margin-top: 0;
+}
+
+.prompt-active {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 41px;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.prompt-active input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--green);
 }
 
 .source-page {
@@ -1813,6 +1928,11 @@ textarea {
   .vocab-tags {
     justify-content: flex-start;
     max-width: none;
+  }
+
+  .prompt-admin,
+  .prompt-editor__top {
+    grid-template-columns: 1fr;
   }
 
   .source-card__top,

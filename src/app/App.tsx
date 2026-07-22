@@ -11,6 +11,7 @@ import { ImageUploadPage } from "../pages/ImageUploadPage";
 import { ModulePage } from "../pages/ModulePage";
 import { NewCoursePage } from "../pages/NewCoursePage";
 import { PendingCoursesPage } from "../pages/PendingCoursesPage";
+import { PromptsPage } from "../pages/PromptsPage";
 import { SourceValidationPage } from "../pages/SourceValidationPage";
 import { TreatmentPage } from "../pages/TreatmentPage";
 import { VocabularyPage } from "../pages/VocabularyPage";
@@ -39,6 +40,7 @@ export function App() {
         <Route path="images/:courseId/:imageId" element={<ImageViewerPage />} />
         <Route path="nouveau-cours" element={<NewCoursePage />} />
         <Route path="vocabulaire" element={<VocabularyPage />} />
+        <Route path="prompts" element={<PromptsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

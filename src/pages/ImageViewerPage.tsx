@@ -7,6 +7,7 @@ import {
   listCourseReferences,
   saveCourseImageVerification,
 } from "../lib/libraryRepository";
+import type { CourseImage } from "../types/domain";
 
 function parseDefects(value: string) {
   return value
@@ -56,6 +57,9 @@ export function ImageViewerPage() {
   const [conforme, setConforme] = useState(true);
   const [verdict, setVerdict] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
+  const [savedVerification, setSavedVerification] = useState<
+    CourseImage["verification"] | null
+  >(null);
   const [saving, setSaving] = useState(false);
   const load = useCallback(async () => {
     if (!courseId || !imageId) {
@@ -92,7 +96,7 @@ export function ImageViewerPage() {
               : reference.texteCours || reference.texteExact;
 
           return `- ${text}${
-            reference.choixSource ? ` — ${reference.choixSource}` : ""
+            reference.choixSource ? ` - ${reference.choixSource}` : ""
           }`;
         })
         .join("\n"),
@@ -123,15 +127,21 @@ export function ImageViewerPage() {
     setNotice(null);
 
     try {
+      const defauts = conforme ? [] : parseDefects(verdict);
       await saveCourseImageVerification({
         professorId: data.professor.id,
         moduleId: data.module.id,
         courseId: data.course.id,
         imageId: data.image.id,
         conforme,
-        defauts: conforme ? [] : parseDefects(verdict),
+        defauts,
       });
-      setNotice("Vérification enregistrée.");
+      setSavedVerification({ faite: true, conforme, defauts });
+      setNotice(
+        conforme
+          ? "Contrôle conforme enregistré. L'étape image est terminée."
+          : "Contrôle enregistré. Dépose une version corrigée après retouche.",
+      );
     } finally {
       setSaving(false);
     }
@@ -150,6 +160,9 @@ export function ImageViewerPage() {
     );
   }
 
+  const verification = savedVerification ?? data.image.verification;
+  const hasRealImage = Boolean(data.image.url);
+
   return (
     <section className="image-viewer">
       <div className="viewer-bar">
@@ -167,9 +180,9 @@ export function ImageViewerPage() {
             className="viewer-button viewer-button--primary"
             to={`/cours/${data.course.id}/images/new`}
           >
-            {data.image.url ? "Ajouter une version" : "Déposer l'image"}
+            {hasRealImage ? "Ajouter une version" : "Déposer l'image"}
           </Link>
-          {data.image.url ? (
+          {hasRealImage ? (
             <a className="viewer-button" href={data.image.url}>
               Télécharger
             </a>
@@ -178,7 +191,7 @@ export function ImageViewerPage() {
       </div>
 
       <div className="viewer-stage">
-        {data.image.url ? (
+        {hasRealImage ? (
           <img alt="" src={data.image.url} />
         ) : (
           <div className="viewer-fake">
@@ -206,67 +219,96 @@ export function ImageViewerPage() {
         </div>
       ) : null}
 
-      <div className="viewer-check">
-        <div className="viewer-check__head">
-          <div>
-            <h2>Contrôle image</h2>
-            <p>
-              {data.image.verification.faite
-                ? data.image.verification.conforme
-                  ? "Dernier verdict : conforme"
-                  : `${data.image.verification.defauts.length} défaut${
-                      data.image.verification.defauts.length > 1 ? "s" : ""
-                    } relevé${
-                      data.image.verification.defauts.length > 1 ? "s" : ""
-                    }`
-                : "À vérifier avec Claude par copier-coller."}
-            </p>
-          </div>
-          <button
-            className="viewer-button"
-            onClick={copyVerificationPrompt}
-            type="button"
-          >
-            Copier le prompt de contrôle
-          </button>
-        </div>
-
-        {notice ? <div className="viewer-notice">{notice}</div> : null}
-
-        <div className="viewer-check__modes">
-          <button
-            className={conforme ? "viewer-button viewer-button--primary" : "viewer-button"}
-            onClick={() => setConforme(true)}
-            type="button"
-          >
-            Conforme
-          </button>
-          <button
-            className={!conforme ? "viewer-button viewer-button--primary" : "viewer-button"}
-            onClick={() => setConforme(false)}
-            type="button"
-          >
-            À corriger
-          </button>
-        </div>
-
-        {!conforme ? (
-          <textarea
-            onChange={(event) => setVerdict(event.target.value)}
-            placeholder="Colle ici la liste des défauts, un par ligne."
-            value={verdict}
-          />
-        ) : null}
-
-        <button
-          className="viewer-button viewer-button--primary"
-          disabled={saving || (!conforme && parseDefects(verdict).length === 0)}
-          onClick={saveVerification}
-          type="button"
+      {hasRealImage ? (
+        <div
+          className={
+            verification.faite && verification.conforme
+              ? "viewer-check viewer-check--done"
+              : "viewer-check"
+          }
         >
-          {saving ? "Enregistrement..." : "Enregistrer le contrôle"}
-        </button>
-      </div>
+          <div className="viewer-check__head">
+            <div>
+              <h2>
+                {verification.faite && verification.conforme
+                  ? "Image terminée"
+                  : "Contrôle image"}
+              </h2>
+              <p>
+                {verification.faite
+                  ? verification.conforme
+                    ? "Dernier verdict : conforme. L'étape image est complète."
+                    : `${verification.defauts.length} défaut${
+                        verification.defauts.length > 1 ? "s" : ""
+                      } relevé${verification.defauts.length > 1 ? "s" : ""}`
+                  : "À vérifier avec Claude par copier-coller."}
+              </p>
+            </div>
+            <button
+              className="viewer-button"
+              onClick={copyVerificationPrompt}
+              type="button"
+            >
+              Copier le prompt de contrôle
+            </button>
+          </div>
+
+          {notice ? <div className="viewer-notice">{notice}</div> : null}
+
+          <div className="viewer-check__modes">
+            <button
+              className={conforme ? "viewer-button viewer-button--primary" : "viewer-button"}
+              onClick={() => setConforme(true)}
+              type="button"
+            >
+              Conforme
+            </button>
+            <button
+              className={!conforme ? "viewer-button viewer-button--primary" : "viewer-button"}
+              onClick={() => setConforme(false)}
+              type="button"
+            >
+              À corriger
+            </button>
+          </div>
+
+          {!conforme ? (
+            <textarea
+              onChange={(event) => setVerdict(event.target.value)}
+              placeholder="Colle ici la liste des défauts, un par ligne."
+              value={verdict}
+            />
+          ) : null}
+
+          <button
+            className="viewer-button viewer-button--primary"
+            disabled={saving || (!conforme && parseDefects(verdict).length === 0)}
+            onClick={saveVerification}
+            type="button"
+          >
+            {saving ? "Enregistrement..." : "Enregistrer le contrôle"}
+          </button>
+        </div>
+      ) : (
+        <div className="viewer-check viewer-check--empty">
+          <div className="viewer-check__head">
+            <div>
+              <h2>Image à déposer</h2>
+              <p>
+                Le prompt est conservé, mais aucun fichier image n'a encore été
+                envoyé. Le contrôle apparaîtra après le dépôt.
+              </p>
+            </div>
+            <Link
+              className="viewer-button viewer-button--primary"
+              to={`/cours/${data.course.id}/images/new`}
+            >
+              Déposer l'image
+            </Link>
+          </div>
+          {notice ? <div className="viewer-notice">{notice}</div> : null}
+        </div>
+      )}
 
       <details className="viewer-prompt">
         <summary>Voir le prompt qui a généré cette image</summary>
