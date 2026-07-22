@@ -163,8 +163,14 @@ export function ImageViewerPage() {
           <Link className="viewer-button" to={`/modules/${data.module.id}/images`}>
             Fermer
           </Link>
+          <Link
+            className="viewer-button viewer-button--primary"
+            to={`/cours/${data.course.id}/images/new`}
+          >
+            {data.image.url ? "Ajouter une version" : "Déposer l'image"}
+          </Link>
           {data.image.url ? (
-            <a className="viewer-button viewer-button--primary" href={data.image.url}>
+            <a className="viewer-button" href={data.image.url}>
               Télécharger
             </a>
           ) : null}
