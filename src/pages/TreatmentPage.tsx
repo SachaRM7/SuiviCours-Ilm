@@ -4,15 +4,25 @@ import { useAsync } from "../hooks/useAsync";
 import {
   getCourseArtifactsByPath,
   getCourseContext,
+  markStepDone,
   restartStep,
+  saveArtifact,
 } from "../lib/libraryRepository";
-import type { ArtifactType, Course, StepKey } from "../types/domain";
+import { buildPromptPayload } from "../lib/promptRepository";
+import type {
+  ArtifactType,
+  Course,
+  PromptStep,
+  StepKey,
+} from "../types/domain";
 
 type StepDefinition = {
   key: StepKey;
+  promptStep: PromptStep;
   title: string;
   description: string;
-  artifactType?: ArtifactType;
+  resultArtifactType?: ArtifactType;
+  sourceArtifactType?: ArtifactType;
   unlocksAfter?: StepKey;
   destination: string;
 };
@@ -20,46 +30,56 @@ type StepDefinition = {
 const steps: StepDefinition[] = [
   {
     key: "transcription",
+    promptStep: "transcription",
     title: "Transcription",
-    description: "Transcrire l'audio, puis conserver uniquement le texte corrigé.",
-    artifactType: "transcription_corrigee",
+    description: "Transcrire l'audio dans Notebook Gemini.",
     destination: "Notebook Gemini",
   },
   {
     key: "correction",
+    promptStep: "correction",
     title: "Correction",
-    description: "Nettoyer les termes et préparer le texte source.",
+    description: "Nettoyer les termes et produire la transcription corrigée.",
+    resultArtifactType: "transcription_corrigee",
     unlocksAfter: "transcription",
     destination: "Claude",
   },
   {
     key: "synthese",
+    promptStep: "synthese",
     title: "Synthèse",
     description: "Structurer le cours en document lisible.",
-    artifactType: "synthese",
+    resultArtifactType: "synthese",
+    sourceArtifactType: "transcription_corrigee",
     unlocksAfter: "correction",
     destination: "Claude",
   },
   {
     key: "sources",
+    promptStep: "sources",
     title: "Sources",
     description: "Identifier les références citées.",
+    sourceArtifactType: "synthese",
     unlocksAfter: "synthese",
     destination: "Claude",
   },
   {
     key: "fiche",
+    promptStep: "fiche",
     title: "Fiche de révision",
     description: "Condenser l'essentiel en une page mémorisable.",
-    artifactType: "fiche",
+    resultArtifactType: "fiche",
+    sourceArtifactType: "synthese",
     unlocksAfter: "sources",
     destination: "Claude",
   },
   {
     key: "image",
+    promptStep: "prompt_image",
     title: "Fiche image",
     description: "Générer le prompt, déposer l'image, puis vérifier.",
-    artifactType: "prompt_image",
+    resultArtifactType: "prompt_image",
+    sourceArtifactType: "synthese",
     unlocksAfter: "sources",
     destination: "GPT Image",
   },
@@ -93,6 +113,15 @@ export function TreatmentPage() {
   const { courseId } = useParams();
   const [reloadKey, setReloadKey] = useState(0);
   const [busyStep, setBusyStep] = useState<StepKey | null>(null);
+  const [results, setResults] = useState<Record<StepKey, string>>({
+    transcription: "",
+    correction: "",
+    synthese: "",
+    sources: "",
+    fiche: "",
+    image: "",
+  });
+  const [notice, setNotice] = useState<string | null>(null);
   const load = useCallback(async () => {
     void reloadKey;
     if (!courseId) {
@@ -117,6 +146,60 @@ export function TreatmentPage() {
     const done = steps.filter((step) => data?.course.etapes[step.key].fait).length;
     return { done, total: steps.length };
   }, [data?.course.etapes]);
+
+  async function handleCopyPrompt(step: StepDefinition) {
+    if (!data) {
+      return;
+    }
+
+    setNotice(null);
+    const payload = await buildPromptPayload({
+      context: {
+        professor: data.professor,
+        module: data.module,
+        course: data.course,
+      },
+      artifacts: data.artifacts,
+      etape: step.promptStep,
+      sourceArtifactType: step.sourceArtifactType,
+    });
+    await navigator.clipboard.writeText(payload);
+    setNotice(`Prompt ${step.title.toLowerCase()} copié.`);
+  }
+
+  async function handleSaveResult(step: StepDefinition) {
+    if (!data) {
+      return;
+    }
+
+    setBusyStep(step.key);
+    setNotice(null);
+
+    try {
+      if (step.resultArtifactType) {
+        await saveArtifact({
+          professorId: data.professor.id,
+          moduleId: data.module.id,
+          courseId: data.course.id,
+          type: step.resultArtifactType,
+          contenu: results[step.key],
+        });
+      } else {
+        await markStepDone({
+          professorId: data.professor.id,
+          moduleId: data.module.id,
+          courseId: data.course.id,
+          step: step.key,
+        });
+      }
+
+      setResults((current) => ({ ...current, [step.key]: "" }));
+      setReloadKey((key) => key + 1);
+      setNotice(`${step.title} enregistrée.`);
+    } finally {
+      setBusyStep(null);
+    }
+  }
 
   async function handleRestart(step: StepKey) {
     if (!data) {
@@ -178,13 +261,15 @@ export function TreatmentPage() {
         </div>
       </header>
 
+      {notice ? <div className="empty-state notice-state">{notice}</div> : null}
+
       <div className="treatment-steps">
         {steps.map((step, index) => {
           const state = data.course.etapes[step.key];
           const unlocked = isUnlocked(data.course, step);
           const isActive = active?.key === step.key;
-          const artifact = step.artifactType
-            ? data.artifacts.find((item) => item.type === step.artifactType)
+          const artifact = step.resultArtifactType
+            ? data.artifacts.find((item) => item.type === step.resultArtifactType)
             : null;
 
           return (
@@ -209,7 +294,10 @@ export function TreatmentPage() {
                       ? `Fait ${formatDate(state.date)}`
                       : unlocked
                         ? step.description
-                        : `Après ${steps.find((item) => item.key === step.unlocksAfter)?.title}`}
+                        : `Après ${
+                            steps.find((item) => item.key === step.unlocksAfter)
+                              ?.title
+                          }`}
                   </small>
                 </span>
                 <b>
@@ -228,6 +316,13 @@ export function TreatmentPage() {
                   <span className="dest-pill">{step.destination}</span>
                   <p>{step.description}</p>
                   <div className="step-actions">
+                    <button
+                      className="tool"
+                      onClick={() => handleCopyPrompt(step)}
+                      type="button"
+                    >
+                      Copier le prompt
+                    </button>
                     {artifact ? (
                       <Link
                         className="tool"
@@ -236,12 +331,12 @@ export function TreatmentPage() {
                         Voir le contenu
                       </Link>
                     ) : null}
-                    {step.artifactType ? (
+                    {step.resultArtifactType ? (
                       <Link
                         className="tool"
-                        to={`/cours/${data.course.id}/${step.artifactType}/edit`}
+                        to={`/cours/${data.course.id}/${step.resultArtifactType}/edit`}
                       >
-                        {artifact ? "Modifier" : "Saisir le résultat"}
+                        {artifact ? "Modifier" : "Saisir manuellement"}
                       </Link>
                     ) : null}
                     {step.key === "image" ? (
@@ -263,6 +358,36 @@ export function TreatmentPage() {
                       </button>
                     ) : null}
                   </div>
+
+                  {!state.fait ? (
+                    <div className="pipeline-paste">
+                      <textarea
+                        onChange={(event) =>
+                          setResults((current) => ({
+                            ...current,
+                            [step.key]: event.target.value,
+                          }))
+                        }
+                        placeholder={
+                          step.resultArtifactType
+                            ? "Colle ici le résultat produit..."
+                            : "Aucun artefact n'est conservé pour cette étape. Tu peux laisser vide et marquer fait."
+                        }
+                        value={results[step.key]}
+                      />
+                      <button
+                        className="button button--primary"
+                        disabled={
+                          busyStep === step.key ||
+                          Boolean(step.resultArtifactType && !results[step.key].trim())
+                        }
+                        onClick={() => handleSaveResult(step)}
+                        type="button"
+                      >
+                        {busyStep === step.key ? "Enregistrement..." : "Enregistrer"}
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
             </article>

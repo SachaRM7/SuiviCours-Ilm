@@ -400,6 +400,33 @@ export async function saveCourseImage(input: {
   return imageId;
 }
 
+export async function markStepDone(input: {
+  professorId: string;
+  moduleId: string;
+  courseId: string;
+  step: StepKey;
+}) {
+  const now = new Date().toISOString();
+
+  await updateDoc(
+    doc(
+      db,
+      "professeurs",
+      input.professorId,
+      "modules",
+      input.moduleId,
+      "cours",
+      input.courseId,
+    ),
+    {
+      [`etapes.${input.step}.fait`]: true,
+      [`etapes.${input.step}.date`]: now,
+      [`etapes.${input.step}.obsolete`]: false,
+      updatedAt: now,
+    },
+  );
+}
+
 const downstreamSteps: Record<StepKey, StepKey[]> = {
   transcription: ["correction", "synthese", "sources", "fiche", "image"],
   correction: ["synthese", "sources", "fiche", "image"],
