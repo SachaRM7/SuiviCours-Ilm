@@ -237,6 +237,10 @@ input {
   padding: 24px;
 }
 
+.empty-state--alert {
+  border-left: 3px solid var(--bordeaux);
+}
+
 .empty-state h2 {
   margin: 0 0 6px;
   color: var(--green);
