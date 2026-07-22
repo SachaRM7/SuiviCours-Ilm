@@ -29,12 +29,13 @@ L'app est **d'abord une bibliothèque**, ensuite un outil de production. La prio
   horaires: {
     jours: ["MO", "TH"],        // codes RRULE
     heure: "20:30",
-    duree: 60                   // minutes
+    duree: 60,                  // minutes
+    horaireVariable: false
   },
   ordre: 1
 }
 ```
-Second document : `nom: "Ibrahim"`, `jours: ["SU"]`, heure approximative (après Asr — variable, donc heure indicative seulement).
+Second document : `nom: "Ibrahim"`, `jours: ["SU"]`, `horaireVariable: true`. Pour lui, l'heure est indicative : l'app propose le dimanche soir sans heure précise et laisse le champ heure vide à remplir.
 
 ### `professeurs/{id}/modules/{id}`
 ```
@@ -47,7 +48,7 @@ Second document : `nom: "Ibrahim"`, `jours: ["SU"]`, heure approximative (après
   compteurCours: 14            // dernier numéro attribué
 }
 ```
-Le slug doit être unique globalement : vérifier à la création et alerter en cas de collision.
+Le slug doit être unique globalement : vérifier à la création et alerter en cas de collision. L'unicité est matérialisée par une collection racine `slugs/{slug}` qui référence `{ professeurId, moduleId }`. La vérification se fait par lecture directe de ce document, pas par collection group query.
 
 ### `professeurs/{p}/modules/{m}/cours/{id}`
 ```
@@ -85,7 +86,7 @@ transcription → correction → synthese → sources → ┬→ fiche
   createdAt
 }
 ```
-La transcription brute (pré-correction) n'est **pas** conservée.
+La transcription brute (pré-correction) n'est **pas** conservée. Le prompt image est un artefact texte (`prompt_image`). L'image déposée va dans `images`, avec `promptUtilise` recopié depuis l'artefact. Le prompt reste consultable depuis la visionneuse.
 
 ### `.../cours/{id}/references/{id}`
 Résultat de l'étape sources, après arbitrage utilisateur.
@@ -178,7 +179,7 @@ Le parsing doit être tolérant : si un marqueur est absent, l'étape reste vali
 
 ## 6. Écrans
 
-Six maquettes HTML statiques sont fournies. Elles fixent la structure et l'identité visuelle ; les reproduire fidèlement en React.
+Quatre fichiers de maquettes HTML statiques sont fournis. `prototype-v4.html` contient cinq écrans (accueil, module, listes, lecture, visionneuse). Ils fixent la structure et l'identité visuelle ; les reproduire fidèlement en React.
 
 ### 6.1 Accueil — `prototype-v4.html`
 Liste des modules groupés par professeur. Une carte par module : nom, slug, nombre de cours, statut.
@@ -239,15 +240,19 @@ Un tableau de sortie en bas se remplit en direct, montrant exactement ce qui par
 ### 6.9 Vocabulaire
 Liste globale, tous professeurs et modules confondus. Recherche. Chaque entrée : translittération, graphie arabe, glose, et les tags des cours d'origine. Les tags sont cliquables et mènent au cours.
 
+Hors v1 : le modèle est créé, mais aucun écran dédié n'est construit tant que le pipeline n'alimente pas automatiquement cette collection.
+
 ### 6.10 Prompts
 Liste des six prompts avec leur version. Consultation, édition, bouton copier.
+
+Hors v1 : les six prompts sont seedés en base, mais l'écran dédié arrive avec le pipeline.
 
 ---
 
 ## 7. Règles fonctionnelles
 
 ### Régénération d'une étape
-Relancer une étape ne détruit rien en aval. Les artefacts produits depuis la version antérieure sont marqués `obsolete: true` : ils restent accessibles et lisibles, mais l'interface les signale visuellement.
+Relancer une étape ne détruit rien en aval. Ce sont les étapes en aval qui passent `obsolete: true`, pas les artefacts eux-mêmes. Par exemple, si la synthèse du cours 15 est relancée, les étapes `sources`, `fiche` et `image` deviennent obsolètes parce qu'elles ont été produites depuis une synthèse qui n'existe plus. Leurs artefacts restent accessibles et lisibles, et l'interface les signale visuellement.
 
 L'utilisateur peut ensuite choisir explicitement de les invalider — action destructive nécessitant une confirmation.
 
@@ -260,7 +265,27 @@ L'image déposée est envoyée à Claude avec la synthèse et les références v
 Sortie : conforme, ou liste de défauts. En v1 cette étape passe aussi par copier-coller.
 
 ### Export
-Chaque document est exportable en `.md`. Un module entier est exportable en archive. C'est une garantie de non-enfermement, à prévoir dès la v1.
+Chaque document est exportable en `.md`. Un module entier est exportable en archive `.zip`. C'est une garantie de non-enfermement, à prévoir dès la v1.
+
+Structure d'archive :
+```
+Tawhid/
+  syntheses/14-les-trois-degres-de-l-irja.md
+  fiches/14-les-trois-degres-de-l-irja.md
+  transcriptions/14-les-trois-degres-de-l-irja.md
+  images/14-les-trois-degres-de-l-irja.png
+  module.json
+```
+Le slug du titre est en kebab-case et préfixé du numéro sur 2 chiffres. `module.json` contient les métadonnées : professeur, module, liste des cours. L'audio n'est pas inclus dans l'export.
+
+### Audio
+En v1, l'audio est seulement stocké, sans traitement. Formats acceptés : `m4a`, `mp3`, `wav`. Taille maximale : 200 Mo. Si cette partie complique le premier incrément, elle peut être repoussée en v2 sans bloquer la valeur principale.
+
+### Auth
+Vrai login Firebase Auth dès la v1, email/password, un seul compte autorisé. Les règles Firestore et Storage limitent lecture/écriture à cet UID.
+
+### Recherche
+En v1, la recherche est côté client, sur titres et contenus. Le volume prévu reste faible ; pas d'Algolia ni d'index externe.
 
 ---
 
@@ -289,7 +314,7 @@ Rayon de bordure : 10px pour les cartes, 20px pour les boutons pilule.
 ## 9. Priorités de développement
 
 **v1 — la bibliothèque**
-Modèle de données, accueil, module, rayons, listes, lecture, visionneuse, export. Saisie manuelle des documents. C'est déjà l'essentiel de la valeur.
+Modèle de données, accueil, module, rayons, listes, lecture, visionneuse, export. Saisie manuelle des documents via textarea markdown + aperçu. Modèle `vocabulaire` et seed des six prompts, mais pas d'écran dédié. C'est déjà l'essentiel de la valeur.
 
 **v2 — le pipeline**
 Écran de traitement, prompts avec injection de variables, boutons copier, parsing des marqueurs, vocabulaire alimenté automatiquement.

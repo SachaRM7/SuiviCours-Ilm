@@ -1,0 +1,14 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isAllowedUser() {
+      return request.auth != null
+        && request.auth.uid == "REPLACE_WITH_ALLOWED_UID";
+    }
+
+    match /{path=**} {
+      allow read, write: if isAllowedUser();
+    }
+  }
+}
