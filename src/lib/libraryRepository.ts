@@ -473,6 +473,36 @@ export async function saveCourseImage(input: {
   return imageId;
 }
 
+export async function saveCourseImageVerification(input: {
+  professorId: string;
+  moduleId: string;
+  courseId: string;
+  imageId: string;
+  conforme: boolean;
+  defauts: string[];
+}) {
+  await updateDoc(
+    doc(
+      db,
+      "professeurs",
+      input.professorId,
+      "modules",
+      input.moduleId,
+      "cours",
+      input.courseId,
+      "images",
+      input.imageId,
+    ),
+    {
+      verification: {
+        faite: true,
+        conforme: input.conforme,
+        defauts: input.defauts,
+      },
+    },
+  );
+}
+
 export async function markStepDone(input: {
   professorId: string;
   moduleId: string;

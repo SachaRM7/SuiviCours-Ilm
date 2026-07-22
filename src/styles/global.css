@@ -1039,6 +1039,71 @@ textarea {
   padding-bottom: 18px;
 }
 
+.viewer-check {
+  width: min(920px, calc(100% - 40px));
+  margin: 0 auto 14px;
+  border: 1px solid rgba(217, 198, 168, 0.24);
+  border-radius: var(--radius-card);
+  background: rgba(249, 244, 239, 0.06);
+  color: var(--gold-pale);
+  padding: 16px;
+}
+
+.viewer-check__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.viewer-check h2 {
+  margin: 0;
+  color: var(--cream);
+  font-family: "Cormorant Garamond", serif;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.viewer-check p {
+  margin: 2px 0 0;
+  color: rgba(249, 244, 239, 0.62);
+  font-size: 12.5px;
+}
+
+.viewer-check__modes {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.viewer-check textarea {
+  width: 100%;
+  min-height: 96px;
+  margin-top: 12px;
+  border: 1px solid rgba(217, 198, 168, 0.32);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--cream);
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 12px;
+  resize: vertical;
+}
+
+.viewer-check > .viewer-button {
+  margin-top: 12px;
+}
+
+.viewer-notice {
+  margin-top: 12px;
+  border-radius: 6px;
+  background: rgba(172, 143, 101, 0.16);
+  color: var(--gold-pale);
+  font-size: 12.5px;
+  padding: 9px 11px;
+}
+
 .viewer-prompt summary {
   border-top: 1px solid rgba(217, 198, 168, 0.2);
   color: var(--gold-pale);
@@ -1440,6 +1505,10 @@ textarea {
   }
 
   .viewer-bar {
+    flex-direction: column;
+  }
+
+  .viewer-check__head {
     flex-direction: column;
   }
 
