@@ -38,7 +38,9 @@ a {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
@@ -300,7 +302,8 @@ input {
   text-transform: uppercase;
 }
 
-.field input {
+.field input,
+.field select {
   width: 100%;
   border: 1px solid var(--cream-deep);
   border-radius: 8px;
@@ -309,9 +312,109 @@ input {
   padding: 11px 14px;
 }
 
-.field input:focus {
+.field input:focus,
+.field select:focus,
+.plain-textarea:focus {
   border-color: var(--gold);
   outline: none;
+}
+
+.narrow {
+  max-width: 680px;
+}
+
+.guess-card {
+  border-radius: var(--radius-card);
+  background: var(--green);
+  color: var(--cream);
+  padding: 20px 22px;
+}
+
+.guess-card h2 {
+  margin: 0 0 5px;
+  font-family: "Cormorant Garamond", serif;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.guess-card p:last-child {
+  margin: 0;
+  color: var(--gold-pale);
+  font-size: 13.5px;
+}
+
+.edit-card {
+  border: 1px solid var(--cream-deep);
+  border-radius: var(--radius-card);
+  background: var(--white);
+  padding: 22px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.editor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.editor-pane {
+  display: grid;
+  gap: 8px;
+}
+
+.editor-pane > span {
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.editor-pane textarea,
+.plain-textarea {
+  width: 100%;
+  min-height: 520px;
+  resize: vertical;
+  border: 1px solid var(--cream-deep);
+  border-radius: var(--radius-card);
+  background: var(--white);
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  padding: 16px;
+}
+
+.plain-textarea {
+  min-height: 160px;
+}
+
+.markdown-body--preview {
+  min-height: 520px;
+  overflow: auto;
+}
+
+.actions-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.todo-link {
+  display: inline-flex;
+  width: fit-content;
+  border: 1px solid var(--gold-pale);
+  border-radius: var(--radius-pill);
+  background: var(--white);
+  color: var(--green);
+  font-size: 13px;
+  padding: 8px 16px;
 }
 
 .search {
@@ -531,6 +634,13 @@ input {
 
 .cx--copy {
   margin-left: auto;
+}
+
+.edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: -12px;
 }
 
 .markdown-body {
@@ -790,5 +900,10 @@ input {
 
   .viewer-bar {
     flex-direction: column;
+  }
+
+  .form-grid,
+  .editor-grid {
+    grid-template-columns: 1fr;
   }
 }

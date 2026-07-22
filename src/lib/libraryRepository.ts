@@ -5,10 +5,14 @@ import {
   getDocs,
   orderBy,
   query,
+  setDoc,
+  updateDoc,
   type DocumentData,
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { db } from "./firebase";
+import { storage } from "./firebase";
 import type {
   Artifact,
   ArtifactType,
@@ -22,6 +26,12 @@ import type {
 
 export type ProfessorWithModules = Professor & {
   modules: CourseModule[];
+};
+
+export type CourseContext = {
+  professor: Professor;
+  module: CourseModule;
+  course: Course;
 };
 
 function professorFromDoc(doc: QueryDocumentSnapshot<DocumentData>): Professor {
@@ -160,6 +170,225 @@ export async function listCoursesForModule(
   return snapshot.docs.map(courseFromDoc);
 }
 
+export async function getCourseContext(
+  courseId: string,
+): Promise<CourseContext | null> {
+  const professors = await listProfessorsWithModules();
+
+  for (const professor of professors) {
+    for (const module of professor.modules) {
+      const courseDoc = await getDoc(
+        doc(
+          db,
+          "professeurs",
+          professor.id,
+          "modules",
+          module.id,
+          "cours",
+          courseId,
+        ),
+      );
+
+      if (courseDoc.exists()) {
+        return {
+          professor,
+          module,
+          course: {
+            id: courseDoc.id,
+            ...(courseDoc.data() as Omit<Course, "id">),
+          },
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+function emptySteps(): Course["etapes"] {
+  return {
+    transcription: { fait: false, date: null, obsolete: false },
+    correction: { fait: false, date: null, obsolete: false },
+    synthese: { fait: false, date: null, obsolete: false },
+    sources: { fait: false, date: null, obsolete: false },
+    fiche: { fait: false, date: null, obsolete: false },
+    image: { fait: false, date: null, obsolete: false },
+  };
+}
+
+export async function createCourse(input: {
+  professorId: string;
+  moduleId: string;
+  numero: number;
+  titre: string;
+  date: string;
+}) {
+  const courseId = `${input.moduleId}-${input.numero}`;
+  const now = new Date().toISOString();
+  const moduleRef = doc(
+    db,
+    "professeurs",
+    input.professorId,
+    "modules",
+    input.moduleId,
+  );
+  const courseRef = doc(
+    db,
+    "professeurs",
+    input.professorId,
+    "modules",
+    input.moduleId,
+    "cours",
+    courseId,
+  );
+  const [moduleDoc, existingCourseDoc] = await Promise.all([
+    getDoc(moduleRef),
+    getDoc(courseRef),
+  ]);
+
+  if (existingCourseDoc.exists()) {
+    throw new Error(`Le cours ${input.numero} existe déjà pour ce module.`);
+  }
+
+  const course: Omit<Course, "id"> = {
+    professeurId: input.professorId,
+    moduleId: input.moduleId,
+    numero: input.numero,
+    titre: input.titre,
+    titreValide: Boolean(input.titre.trim()),
+    date: input.date,
+    audioUrl: null,
+    etapes: emptySteps(),
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  await setDoc(courseRef, course);
+  await updateDoc(moduleRef, {
+    compteurCours: Math.max(moduleDoc.data()?.compteurCours ?? 0, input.numero),
+  });
+
+  return courseId;
+}
+
+function stepForArtifact(type: ArtifactType): keyof Course["etapes"] {
+  if (type === "transcription_corrigee") {
+    return "transcription";
+  }
+
+  if (type === "prompt_image") {
+    return "image";
+  }
+
+  return type;
+}
+
+export async function saveArtifact(input: {
+  professorId: string;
+  moduleId: string;
+  courseId: string;
+  type: ArtifactType;
+  contenu: string;
+}) {
+  const now = new Date().toISOString();
+  const artifact: Omit<Artifact, "id"> = {
+    type: input.type,
+    contenu: input.contenu,
+    version: 1,
+    createdAt: now,
+  };
+  const step = stepForArtifact(input.type);
+
+  await setDoc(
+    doc(
+      db,
+      "professeurs",
+      input.professorId,
+      "modules",
+      input.moduleId,
+      "cours",
+      input.courseId,
+      "artefacts",
+      input.type,
+    ),
+    artifact,
+  );
+  await updateDoc(
+    doc(
+      db,
+      "professeurs",
+      input.professorId,
+      "modules",
+      input.moduleId,
+      "cours",
+      input.courseId,
+    ),
+    {
+      [`etapes.${step}.fait`]: true,
+      [`etapes.${step}.date`]: now,
+      [`etapes.${step}.obsolete`]: false,
+      updatedAt: now,
+    },
+  );
+}
+
+export async function saveCourseImage(input: {
+  professorId: string;
+  moduleId: string;
+  courseId: string;
+  file: File;
+  promptUtilise: string;
+}) {
+  const now = new Date().toISOString();
+  const imageId = `image-${Date.now()}`;
+  const storageRef = ref(
+    storage,
+    `professeurs/${input.professorId}/modules/${input.moduleId}/cours/${input.courseId}/images/${imageId}-${input.file.name}`,
+  );
+  const uploaded = await uploadBytes(storageRef, input.file);
+  const url = await getDownloadURL(uploaded.ref);
+
+  await setDoc(
+    doc(
+      db,
+      "professeurs",
+      input.professorId,
+      "modules",
+      input.moduleId,
+      "cours",
+      input.courseId,
+      "images",
+      imageId,
+    ),
+    {
+      url,
+      promptUtilise: input.promptUtilise,
+      verification: { faite: false, conforme: false, defauts: [] },
+      ordre: Date.now(),
+      createdAt: now,
+    },
+  );
+  await updateDoc(
+    doc(
+      db,
+      "professeurs",
+      input.professorId,
+      "modules",
+      input.moduleId,
+      "cours",
+      input.courseId,
+    ),
+    {
+      "etapes.image.fait": true,
+      "etapes.image.date": now,
+      "etapes.image.obsolete": false,
+      updatedAt: now,
+    },
+  );
+
+  return imageId;
+}
+
 export async function listDocumentsForRayon(
   moduleId: string,
   type: ArtifactType,
@@ -252,60 +481,54 @@ export async function getLibraryDocument(
   courseId: string,
   type: ArtifactType,
 ): Promise<LibraryDocument | null> {
-  const professors = await listProfessorsWithModules();
+  const context = await getCourseContext(courseId);
 
-  for (const professor of professors) {
-    for (const module of professor.modules) {
-      const courseDoc = await getDoc(
-        doc(
-          db,
-          "professeurs",
-          professor.id,
-          "modules",
-          module.id,
-          "cours",
-          courseId,
-        ),
-      );
-
-      if (!courseDoc.exists()) {
-        continue;
-      }
-
-      const artifactDoc = await getDoc(
-        doc(
-          db,
-          "professeurs",
-          professor.id,
-          "modules",
-          module.id,
-          "cours",
-          courseId,
-          "artefacts",
-          type,
-        ),
-      );
-
-      if (!artifactDoc.exists()) {
-        return null;
-      }
-
-      return {
-        course: {
-          id: courseDoc.id,
-          ...(courseDoc.data() as Omit<Course, "id">),
-        },
-        artifact: {
-          id: artifactDoc.id,
-          ...(artifactDoc.data() as Omit<Artifact, "id">),
-        },
-        module,
-        professor,
-      };
-    }
+  if (!context) {
+    return null;
   }
 
-  return null;
+  const artifactDoc = await getDoc(
+    doc(
+      db,
+      "professeurs",
+      context.professor.id,
+      "modules",
+      context.module.id,
+      "cours",
+      courseId,
+      "artefacts",
+      type,
+    ),
+  );
+
+  if (!artifactDoc.exists()) {
+    return null;
+  }
+
+  return {
+    course: context.course,
+    artifact: {
+      id: artifactDoc.id,
+      ...(artifactDoc.data() as Omit<Artifact, "id">),
+    },
+    module: context.module,
+    professor: context.professor,
+  };
+}
+
+export async function getArtifactEditorData(courseId: string, type: ArtifactType) {
+  const context = await getCourseContext(courseId);
+
+  if (!context) {
+    return null;
+  }
+
+  const document = await getLibraryDocument(courseId, type);
+
+  return {
+    ...context,
+    artifact: document?.artifact ?? null,
+  };
 }
 
 export async function getCourseArtifacts(

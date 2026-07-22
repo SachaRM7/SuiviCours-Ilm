@@ -4,10 +4,12 @@ import { AuthGate } from "../features/auth/AuthGate";
 import { LoginPage } from "../features/auth/LoginPage";
 import { DocumentListPage } from "../pages/DocumentListPage";
 import { DocumentReadPage } from "../pages/DocumentReadPage";
+import { ArtifactEditorPage } from "../pages/ArtifactEditorPage";
 import { HomePage } from "../pages/HomePage";
 import { ImageViewerPage } from "../pages/ImageViewerPage";
+import { ImageUploadPage } from "../pages/ImageUploadPage";
 import { ModulePage } from "../pages/ModulePage";
-import { PlaceholderPage } from "../pages/PlaceholderPage";
+import { NewCoursePage } from "../pages/NewCoursePage";
 
 export function App() {
   return (
@@ -25,16 +27,10 @@ export function App() {
         <Route path="modules/:moduleId" element={<ModulePage />} />
         <Route path="modules/:moduleId/:rayon" element={<DocumentListPage />} />
         <Route path="cours/:courseId/:type" element={<DocumentReadPage />} />
+        <Route path="cours/:courseId/:type/edit" element={<ArtifactEditorPage />} />
+        <Route path="cours/:courseId/images/new" element={<ImageUploadPage />} />
         <Route path="images/:courseId/:imageId" element={<ImageViewerPage />} />
-        <Route
-          path="nouveau-cours"
-          element={
-            <PlaceholderPage
-              title="Nouveau cours"
-              description="La création guidée arrive au prochain lot."
-            />
-          }
-        />
+        <Route path="nouveau-cours" element={<NewCoursePage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

@@ -72,6 +72,9 @@ export function DocumentReadPage() {
   }
 
   const { document, artifacts } = data;
+  const missingArtifacts = crossLinks.filter(
+    (link) => !hasArtifact(artifacts, link.type),
+  );
 
   return (
     <article className="stack">
@@ -107,7 +110,36 @@ export function DocumentReadPage() {
         <button className="cx cx--copy" onClick={copyMarkdown} type="button">
           Copier le .md
         </button>
+        <Link
+          className="cx"
+          to={`/cours/${document.course.id}/${document.artifact.type}/edit`}
+        >
+          Modifier
+        </Link>
       </div>
+
+      {missingArtifacts.length > 0 ? (
+        <div className="edit-actions">
+          {missingArtifacts.map((link) => (
+            <Link
+              className="tool"
+              key={link.type}
+              to={`/cours/${document.course.id}/${link.type}/edit`}
+            >
+              Saisir {link.label.toLowerCase()}
+            </Link>
+          ))}
+          <Link className="tool" to={`/cours/${document.course.id}/images/new`}>
+            Ajouter une image
+          </Link>
+        </div>
+      ) : (
+        <div className="edit-actions">
+          <Link className="tool" to={`/cours/${document.course.id}/images/new`}>
+            Ajouter une image
+          </Link>
+        </div>
+      )}
 
       <div className="markdown-body">
         <ReactMarkdown

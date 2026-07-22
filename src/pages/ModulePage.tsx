@@ -50,21 +50,26 @@ export function ModulePage() {
       ) : null}
 
       {module ? (
-        <div className="shelf-grid">
-          {shelves.map(([title, description, path], index) => (
-            <Link
-              className={
-                index === 3 ? "shelf-card shelf-card--archive" : "shelf-card"
-              }
-              key={path}
-              to={`/modules/${module.id}/${path}`}
-            >
-              <span className="shelf-card__count">0</span>
-              <strong>{title}</strong>
-              <small>{description}</small>
-            </Link>
-          ))}
-        </div>
+        <>
+          <div className="shelf-grid">
+            {shelves.map(([title, description, path], index) => (
+              <Link
+                className={
+                  index === 3 ? "shelf-card shelf-card--archive" : "shelf-card"
+                }
+                key={path}
+                to={`/modules/${module.id}/${path}`}
+              >
+                <span className="shelf-card__count">0</span>
+                <strong>{title}</strong>
+                <small>{description}</small>
+              </Link>
+            ))}
+          </div>
+          <Link className="todo-link" to="/nouveau-cours">
+            Créer un nouveau cours
+          </Link>
+        </>
       ) : null}
     </section>
   );
