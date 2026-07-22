@@ -51,6 +51,7 @@ export function NewCoursePage() {
   const [time, setTime] = useState("20:30");
   const [titre, setTitre] = useState("");
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -77,10 +78,14 @@ export function NewCoursePage() {
     (module) => module.id === moduleId,
   );
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function createSelectedCourse(input?: { quick?: boolean }) {
+    if (!selectedProfessor || !selectedModule || !date) {
+      return;
+    }
 
-    if (!selectedProfessor || !selectedModule) {
+    if (input?.quick && selectedProfessor.horaires.horaireVariable && !time) {
+      setShowForm(true);
+      setMessage("Précise l'heure du cours avant de le créer.");
       return;
     }
 
@@ -94,18 +99,25 @@ export function NewCoursePage() {
         numero,
         titre,
         date: `${date}T${time || "00:00"}:00`,
-        audioFile,
+        audioFile: input?.quick ? null : audioFile,
       });
-      navigate(`/cours/${courseId}/synthese/edit`);
+      navigate(
+        input?.quick
+          ? `/cours/${courseId}/traitement`
+          : `/cours/${courseId}/synthese/edit`,
+      );
     } catch (reason) {
       setMessage(
-        reason instanceof Error
-          ? reason.message
-          : "Impossible de créer le cours.",
+        reason instanceof Error ? reason.message : "Impossible de créer le cours.",
       );
     } finally {
       setSaving(false);
     }
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await createSelectedCourse();
   }
 
   return (
@@ -132,10 +144,32 @@ export function NewCoursePage() {
               ? "Horaire à préciser."
               : `Créneau indicatif ${suggestion.professor.horaires.heure}.`}
           </p>
+          {!showForm ? (
+            <div className="guess-actions">
+              <button
+                className="button button--primary"
+                disabled={
+                  saving ||
+                  Boolean(selectedProfessor?.horaires.horaireVariable && !time)
+                }
+                onClick={() => createSelectedCourse({ quick: true })}
+                type="button"
+              >
+                {saving ? "Création..." : "C'est ça"}
+              </button>
+              <button
+                className="button"
+                onClick={() => setShowForm(true)}
+                type="button"
+              >
+                Modifier
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : null}
 
-      {data ? (
+      {data && (showForm || !suggestion) ? (
         <form className="edit-card" onSubmit={handleSubmit}>
           <label className="field">
             <span>Enseignant</span>

@@ -1,10 +1,10 @@
 import { useCallback, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAsync } from "../hooks/useAsync";
 import {
   getCourseContext,
   listCourseReferences,
-  saveReferenceDecision,
+  saveReferenceDecisions,
 } from "../lib/libraryRepository";
 import type { CourseReference } from "../types/domain";
 
@@ -50,18 +50,28 @@ function isDecisionComplete(reference: CourseReference, decision: DraftDecision)
   return textReady && decision.choixSource !== undefined;
 }
 
-function suggestedSources(reference: CourseReference) {
-  const options = [
-    reference.sourceIdentifiee,
-    reference.sourceIdentifiee.includes("·")
-      ? reference.sourceIdentifiee.split("·")[0].trim()
-      : "",
-    reference.sourceIdentifiee.includes("—")
-      ? reference.sourceIdentifiee.split("—")[0].trim()
-      : "",
-  ].filter(Boolean);
+function cleanSource(value: string) {
+  return value.trim().replace(/\s+/g, " ");
+}
 
-  return [...new Set(options)];
+function sourceBase(reference: CourseReference) {
+  return cleanSource(reference.sourceIdentifiee.split("—")[0].split("·")[0] ?? "");
+}
+
+function suggestedSources(reference: CourseReference) {
+  const source = cleanSource(reference.sourceIdentifiee);
+  const base = sourceBase(reference);
+  const options: string[] = [];
+
+  if (reference.statutAuto === "allusion" && base) {
+    options.push(`Allusion à ${base}`, base);
+  } else if (reference.statutAuto === "introuvable") {
+    options.push("Attribution sans chaîne");
+  } else {
+    options.push(source, base);
+  }
+
+  return [...new Set(options.filter(Boolean))];
 }
 
 function statusClass(status: CourseReference["statutAuto"]) {
@@ -69,9 +79,10 @@ function statusClass(status: CourseReference["statutAuto"]) {
 }
 
 export function SourceValidationPage() {
+  const navigate = useNavigate();
   const { courseId } = useParams();
   const [reloadKey, setReloadKey] = useState(0);
-  const [savingId, setSavingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const [drafts, setDrafts] = useState<Record<string, DraftDecision>>({});
   const load = useCallback(async () => {
     void reloadKey;
@@ -111,37 +122,39 @@ export function SourceValidationPage() {
   );
   const total = data?.references.length ?? 0;
   const progress = total > 0 ? Math.round((settledCount / total) * 100) : 0;
+  const allSettled = total > 0 && settledCount === total;
 
   function updateDraft(referenceId: string, patch: Partial<DraftDecision>) {
     setDrafts((current) => ({
       ...current,
       [referenceId]: {
-        ...(decisions[referenceId] ?? { choixTexte: null, choixSource: null }),
+        ...(decisions[referenceId] ?? { choixTexte: null, choixSource: undefined }),
         ...patch,
       },
     }));
   }
 
-  async function saveDecision(reference: CourseReference) {
-    if (!data) {
+  async function saveAll() {
+    if (!data || !allSettled) {
       return;
     }
 
-    const decision = decisions[reference.id];
-    setSavingId(reference.id);
-
+    setSaving(true);
     try {
-      await saveReferenceDecision({
+      await saveReferenceDecisions({
         professorId: data.professor.id,
         moduleId: data.module.id,
         courseId: data.course.id,
-        referenceId: reference.id,
-        choixTexte: decision.choixTexte,
-        choixSource: decision.choixSource?.trim() || null,
+        decisions: data.references.map((reference) => ({
+          referenceId: reference.id,
+          choixTexte: decisions[reference.id].choixTexte,
+          choixSource: decisions[reference.id].choixSource?.trim() || null,
+        })),
       });
       setReloadKey((key) => key + 1);
+      navigate(`/cours/${data.course.id}/traitement`);
     } finally {
-      setSavingId(null);
+      setSaving(false);
     }
   }
 
@@ -172,7 +185,7 @@ export function SourceValidationPage() {
 
       <div className="source-note">
         Pour chaque référence, choisis ce qui partira vers la fiche et l'image.
-        Une référence peut être conservée sans ligne de source imprimée.
+        La source imprimée peut être omise : aucune mention de doute ne descendra.
       </div>
 
       <div className="source-progress" aria-label="Progression des validations">
@@ -209,7 +222,7 @@ export function SourceValidationPage() {
 
         return (
           <article
-            className={reference.valide ? "source-card settled" : "source-card"}
+            className={isDecisionComplete(reference, decision) ? "source-card settled" : "source-card"}
             key={reference.id}
           >
             <div className="source-card__top">
@@ -310,18 +323,6 @@ export function SourceValidationPage() {
                   : decision.choixSource || "sans ligne de source"}
               </strong>
             </div>
-
-            <button
-              className="button button--primary"
-              disabled={
-                savingId === reference.id ||
-                !isDecisionComplete(reference, decision)
-              }
-              onClick={() => saveDecision(reference)}
-              type="button"
-            >
-              {savingId === reference.id ? "Enregistrement..." : "Enregistrer"}
-            </button>
           </article>
         );
       })}
@@ -330,12 +331,14 @@ export function SourceValidationPage() {
         <Link className="tool" to={`/cours/${data.course.id}/traitement`}>
           Retour au traitement
         </Link>
-        <Link
-          className={settledCount === total && total > 0 ? "tool on" : "tool"}
-          to={`/cours/${data.course.id}/traitement`}
+        <button
+          className={allSettled ? "tool on" : "tool"}
+          disabled={!allSettled || saving}
+          onClick={saveAll}
+          type="button"
         >
-          Passer à la fiche
-        </Link>
+          {saving ? "Validation..." : "Valider toutes les sources"}
+        </button>
       </div>
     </section>
   );

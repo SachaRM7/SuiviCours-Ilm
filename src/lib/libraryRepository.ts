@@ -554,6 +554,35 @@ export async function updateCourseTitle(input: {
   );
 }
 
+export async function confirmCourseTitle(input: {
+  professorId: string;
+  moduleId: string;
+  courseId: string;
+  titre?: string;
+}) {
+  const updates: Record<string, string | boolean> = {
+    titreValide: true,
+    updatedAt: new Date().toISOString(),
+  };
+
+  if (input.titre !== undefined) {
+    updates.titre = input.titre;
+  }
+
+  await updateDoc(
+    doc(
+      db,
+      "professeurs",
+      input.professorId,
+      "modules",
+      input.moduleId,
+      "cours",
+      input.courseId,
+    ),
+    updates,
+  );
+}
+
 export async function upsertVocabularyTerms(input: {
   professorId: string;
   moduleId: string;
@@ -691,6 +720,28 @@ export async function saveReferenceDecision(input: {
       choixSource: input.choixSource,
       valide: true,
     },
+  );
+}
+
+export async function saveReferenceDecisions(input: {
+  professorId: string;
+  moduleId: string;
+  courseId: string;
+  decisions: Array<{
+    referenceId: string;
+    choixTexte: CourseReference["choixTexte"];
+    choixSource: string | null;
+  }>;
+}) {
+  await Promise.all(
+    input.decisions.map((decision) =>
+      saveReferenceDecision({
+        professorId: input.professorId,
+        moduleId: input.moduleId,
+        courseId: input.courseId,
+        ...decision,
+      }),
+    ),
   );
 }
 

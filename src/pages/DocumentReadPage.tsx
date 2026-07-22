@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import { Link, useParams } from "react-router-dom";
@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { useAsync } from "../hooks/useAsync";
 import { downloadMarkdown } from "../lib/exportLibrary";
 import {
+  confirmCourseTitle,
   getCourseArtifacts,
   getLibraryDocument,
 } from "../lib/libraryRepository";
@@ -38,7 +39,12 @@ function isMostlyArabic(children: ReactNode) {
 export function DocumentReadPage() {
   const { courseId, type = "synthese" } = useParams();
   const artifactType = type as ArtifactType;
+  const [reloadKey, setReloadKey] = useState(0);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [savingTitle, setSavingTitle] = useState(false);
   const load = useCallback(async () => {
+    void reloadKey;
     if (!courseId) {
       return null;
     }
@@ -50,12 +56,37 @@ export function DocumentReadPage() {
 
     const artifacts = await getCourseArtifacts(document);
     return { document, artifacts };
-  }, [artifactType, courseId]);
+  }, [artifactType, courseId, reloadKey]);
   const { data, error, loading } = useAsync(load);
+
+  useEffect(() => {
+    setTitleDraft(data?.document.course.titre ?? "");
+  }, [data?.document.course.titre]);
 
   async function copyMarkdown() {
     if (data?.document.artifact.contenu) {
       await navigator.clipboard.writeText(data.document.artifact.contenu);
+    }
+  }
+
+  async function saveTitle(event?: FormEvent<HTMLFormElement>) {
+    event?.preventDefault();
+    if (!data || !titleDraft.trim()) {
+      return;
+    }
+
+    setSavingTitle(true);
+    try {
+      await confirmCourseTitle({
+        professorId: data.document.professor.id,
+        moduleId: data.document.module.id,
+        courseId: data.document.course.id,
+        titre: titleDraft.trim(),
+      });
+      setEditingTitle(false);
+      setReloadKey((key) => key + 1);
+    } finally {
+      setSavingTitle(false);
     }
   }
 
@@ -87,6 +118,48 @@ export function DocumentReadPage() {
           {document.professor.nom}
         </p>
       </header>
+
+      {document.course.titre && !document.course.titreValide ? (
+        <div className="title-review">
+          <div>
+            <p className="eyebrow">Titre proposé</p>
+            <strong>{document.course.titre}</strong>
+          </div>
+          {editingTitle ? (
+            <form className="title-review__form" onSubmit={saveTitle}>
+              <input
+                onChange={(event) => setTitleDraft(event.target.value)}
+                value={titleDraft}
+              />
+              <button
+                className="tool on"
+                disabled={savingTitle || !titleDraft.trim()}
+                type="submit"
+              >
+                Enregistrer
+              </button>
+            </form>
+          ) : (
+            <div className="title-review__actions">
+              <button
+                className="tool on"
+                disabled={savingTitle}
+                onClick={() => saveTitle()}
+                type="button"
+              >
+                Valider le titre
+              </button>
+              <button
+                className="tool"
+                onClick={() => setEditingTitle(true)}
+                type="button"
+              >
+                Modifier
+              </button>
+            </div>
+          )}
+        </div>
+      ) : null}
 
       <div className="doc-toolbar">
         <nav className="doc-tabs" aria-label="Artefacts du cours">
