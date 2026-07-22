@@ -1,7 +1,8 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAsync } from "../hooks/useAsync";
-import { findModuleById } from "../lib/libraryRepository";
+import { exportMetadataSummary, exportModuleAsZip } from "../lib/exportLibrary";
+import { findModuleById, getModuleExportData } from "../lib/libraryRepository";
 
 const shelves = [
   ["Synthèses", "Le cours complet, structuré", "syntheses"],
@@ -12,6 +13,8 @@ const shelves = [
 
 export function ModulePage() {
   const { moduleId } = useParams();
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const loadModule = useCallback(
     () => (moduleId ? findModuleById(moduleId) : Promise.resolve(null)),
     [moduleId],
@@ -19,6 +22,31 @@ export function ModulePage() {
   const { data, error, loading } = useAsync(loadModule);
   const module = data?.module;
   const professor = data?.professor;
+
+  async function handleExportModule() {
+    if (!moduleId) {
+      return;
+    }
+
+    setExporting(true);
+    setExportError(null);
+
+    try {
+      const exportData = await getModuleExportData(moduleId);
+      if (!exportData) {
+        throw new Error("Module introuvable pour l'export.");
+      }
+      await exportModuleAsZip(exportData);
+    } catch (reason) {
+      setExportError(
+        reason instanceof Error
+          ? reason.message
+          : "Impossible d'exporter ce module.",
+      );
+    } finally {
+      setExporting(false);
+    }
+  }
 
   return (
     <section className="stack">
@@ -66,9 +94,32 @@ export function ModulePage() {
               </Link>
             ))}
           </div>
-          <Link className="todo-link" to="/nouveau-cours">
-            Créer un nouveau cours
-          </Link>
+
+          <div className="module-actions">
+            <Link className="todo-link" to="/nouveau-cours">
+              Créer un nouveau cours
+            </Link>
+            <button
+              className="todo-link todo-link--button"
+              disabled={exporting}
+              onClick={handleExportModule}
+              type="button"
+            >
+              {exporting ? "Export..." : "Exporter le module"}
+            </button>
+          </div>
+
+          {exportError ? (
+            <div className="empty-state empty-state--alert">
+              <p>{exportError}</p>
+            </div>
+          ) : null}
+
+          {professor && module ? (
+            <p className="export-hint">
+              Archive ZIP · {exportMetadataSummary({ professor, module })}
+            </p>
+          ) : null}
         </>
       ) : null}
     </section>

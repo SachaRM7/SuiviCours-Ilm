@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import { Link, useParams } from "react-router-dom";
 import remarkGfm from "remark-gfm";
 import { useAsync } from "../hooks/useAsync";
+import { downloadMarkdown } from "../lib/exportLibrary";
 import {
   getCourseArtifacts,
   getLibraryDocument,
@@ -109,6 +110,19 @@ export function DocumentReadPage() {
         )}
         <button className="cx cx--copy" onClick={copyMarkdown} type="button">
           Copier le .md
+        </button>
+        <button
+          className="cx"
+          onClick={() =>
+            downloadMarkdown({
+              course: document.course,
+              artifact: document.artifact,
+              module: document.module,
+            })
+          }
+          type="button"
+        >
+          Télécharger le .md
         </button>
         <Link
           className="cx"

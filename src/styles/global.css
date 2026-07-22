@@ -417,6 +417,27 @@ textarea {
   padding: 8px 16px;
 }
 
+.module-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.todo-link--button {
+  cursor: pointer;
+}
+
+.todo-link--button:disabled {
+  cursor: progress;
+  opacity: 0.65;
+}
+
+.export-hint {
+  margin: -14px 0 0;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+
 .search {
   width: 100%;
   border: 1px solid var(--cream-deep);

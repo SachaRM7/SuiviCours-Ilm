@@ -34,6 +34,16 @@ export type CourseContext = {
   course: Course;
 };
 
+export type ModuleExportData = {
+  professor: Professor;
+  module: CourseModule;
+  courses: Array<{
+    course: Course;
+    artifacts: Artifact[];
+    images: CourseImage[];
+  }>;
+};
+
 function professorFromDoc(doc: QueryDocumentSnapshot<DocumentData>): Professor {
   const data = doc.data();
 
@@ -548,6 +558,84 @@ export async function getCourseArtifacts(
   );
 
   return snapshot.docs.map(artifactFromDoc);
+}
+
+export async function getCourseArtifactsByPath(
+  professorId: string,
+  moduleId: string,
+  courseId: string,
+): Promise<Artifact[]> {
+  const snapshot = await getDocs(
+    collection(
+      db,
+      "professeurs",
+      professorId,
+      "modules",
+      moduleId,
+      "cours",
+      courseId,
+      "artefacts",
+    ),
+  );
+
+  return snapshot.docs.map(artifactFromDoc);
+}
+
+export async function getCourseImagesByPath(
+  professorId: string,
+  moduleId: string,
+  courseId: string,
+): Promise<CourseImage[]> {
+  const snapshot = await getDocs(
+    query(
+      collection(
+        db,
+        "professeurs",
+        professorId,
+        "modules",
+        moduleId,
+        "cours",
+        courseId,
+        "images",
+      ),
+      orderBy("ordre", "asc"),
+    ),
+  );
+
+  return snapshot.docs.map(imageFromDoc);
+}
+
+export async function getModuleExportData(
+  moduleId: string,
+): Promise<ModuleExportData | null> {
+  const found = await findModuleById(moduleId);
+
+  if (!found) {
+    return null;
+  }
+
+  const courses = await listCoursesForModule(found.professor.id, found.module.id);
+  const courseData = await Promise.all(
+    courses.map(async (course) => ({
+      course,
+      artifacts: await getCourseArtifactsByPath(
+        found.professor.id,
+        found.module.id,
+        course.id,
+      ),
+      images: await getCourseImagesByPath(
+        found.professor.id,
+        found.module.id,
+        course.id,
+      ),
+    })),
+  );
+
+  return {
+    professor: found.professor,
+    module: found.module,
+    courses: courseData,
+  };
 }
 
 export async function getLibraryImage(
