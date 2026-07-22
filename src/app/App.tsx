@@ -10,6 +10,7 @@ import { ImageViewerPage } from "../pages/ImageViewerPage";
 import { ImageUploadPage } from "../pages/ImageUploadPage";
 import { ModulePage } from "../pages/ModulePage";
 import { NewCoursePage } from "../pages/NewCoursePage";
+import { PendingCoursesPage } from "../pages/PendingCoursesPage";
 import { SourceValidationPage } from "../pages/SourceValidationPage";
 import { TreatmentPage } from "../pages/TreatmentPage";
 import { VocabularyPage } from "../pages/VocabularyPage";
@@ -28,6 +29,7 @@ export function App() {
       >
         <Route index element={<HomePage />} />
         <Route path="modules/:moduleId" element={<ModulePage />} />
+        <Route path="modules/:moduleId/a-terminer" element={<PendingCoursesPage />} />
         <Route path="modules/:moduleId/:rayon" element={<DocumentListPage />} />
         <Route path="cours/:courseId/traitement" element={<TreatmentPage />} />
         <Route path="cours/:courseId/sources" element={<SourceValidationPage />} />

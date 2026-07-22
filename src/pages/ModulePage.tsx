@@ -3,9 +3,18 @@ import { Link, useParams } from "react-router-dom";
 import { useAsync } from "../hooks/useAsync";
 import { exportMetadataSummary, exportModuleAsZip } from "../lib/exportLibrary";
 import { getModuleExportData } from "../lib/libraryRepository";
-import type { ArtifactType, CourseImage } from "../types/domain";
+import type { ArtifactType, CourseImage, StepKey } from "../types/domain";
 
 type ShelfKey = "syntheses" | "fiches" | "images" | "transcriptions";
+
+const stepKeys: StepKey[] = [
+  "transcription",
+  "correction",
+  "synthese",
+  "sources",
+  "fiche",
+  "image",
+];
 
 const shelves: Array<{
   key: ShelfKey;
@@ -103,6 +112,16 @@ export function ModulePage() {
     () => (data?.courses ?? []).flatMap((item) => item.images),
     [data?.courses],
   );
+  const pendingCount = useMemo(
+    () =>
+      (data?.courses ?? []).filter((item) =>
+        stepKeys.some(
+          (step) =>
+            !item.course.etapes[step].fait || item.course.etapes[step].obsolete,
+        ),
+      ).length,
+    [data?.courses],
+  );
 
   async function handleExportModule() {
     if (!data) {
@@ -179,6 +198,9 @@ export function ModulePage() {
           <div className="module-actions">
             <Link className="todo-link" to="/nouveau-cours">
               Créer un nouveau cours
+            </Link>
+            <Link className="todo-link" to={`/modules/${data.module.id}/a-terminer`}>
+              {pendingCount} à terminer
             </Link>
             <button
               className="todo-link todo-link--button"

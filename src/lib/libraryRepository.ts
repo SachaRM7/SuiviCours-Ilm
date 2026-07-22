@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteDoc,
   doc,
   documentId,
   getDoc,
@@ -416,6 +417,47 @@ export async function saveArtifact(input: {
   );
 }
 
+export async function discardArtifact(input: {
+  professorId: string;
+  moduleId: string;
+  courseId: string;
+  type: ArtifactType;
+}) {
+  const now = new Date().toISOString();
+  const step = stepForArtifact(input.type);
+
+  await deleteDoc(
+    doc(
+      db,
+      "professeurs",
+      input.professorId,
+      "modules",
+      input.moduleId,
+      "cours",
+      input.courseId,
+      "artefacts",
+      input.type,
+    ),
+  );
+  await updateDoc(
+    doc(
+      db,
+      "professeurs",
+      input.professorId,
+      "modules",
+      input.moduleId,
+      "cours",
+      input.courseId,
+    ),
+    {
+      [`etapes.${step}.fait`]: false,
+      [`etapes.${step}.date`]: null,
+      [`etapes.${step}.obsolete`]: false,
+      updatedAt: now,
+    },
+  );
+}
+
 export async function saveCourseImage(input: {
   professorId: string;
   moduleId: string;
@@ -616,6 +658,13 @@ export async function upsertVocabularyTerms(input: {
         ? existingOccurrences
         : [...existingOccurrences, occurrence];
       const tags = Array.from(new Set([...(existingData?.tags ?? []), tag]));
+      const existingGlose = existingData?.glose as string | undefined;
+      const gloseAlternatives = Array.from(
+        new Set([
+          ...((existingData?.gloseAlternatives ?? []) as string[]),
+          ...(existingGlose && existingGlose !== term.glose ? [term.glose] : []),
+        ]),
+      );
 
       await setDoc(
         vocabRef,
@@ -624,6 +673,7 @@ export async function upsertVocabularyTerms(input: {
           translitteration: existingData?.translitteration ?? term.translitteration,
           arabe: existingData?.arabe ?? term.arabe,
           glose: existingData?.glose ?? term.glose,
+          gloseAlternatives,
           tags,
           occurrences,
           premiereApparition:

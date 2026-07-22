@@ -125,6 +125,7 @@ export type VocabularyEntry = {
   translitteration: string;
   arabe: string;
   glose: string;
+  gloseAlternatives?: string[];
   tags: string[];
   occurrences: Array<{
     professeurId: string;

@@ -1,12 +1,13 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import remarkGfm from "remark-gfm";
 import { useAsync } from "../hooks/useAsync";
 import { downloadMarkdown } from "../lib/exportLibrary";
 import {
   confirmCourseTitle,
+  discardArtifact,
   getCourseArtifacts,
   getLibraryDocument,
 } from "../lib/libraryRepository";
@@ -26,6 +27,13 @@ const crossLinks: Array<{ type: ArtifactType; label: string }> = [
   { type: "prompt_image", label: "Prompt image" },
 ];
 
+const stepByArtifactType: Record<ArtifactType, "synthese" | "fiche" | "transcription" | "image"> = {
+  synthese: "synthese",
+  fiche: "fiche",
+  transcription_corrigee: "transcription",
+  prompt_image: "image",
+};
+
 function hasArtifact(artifacts: Artifact[], type: ArtifactType) {
   return artifacts.some((artifact) => artifact.type === type);
 }
@@ -38,11 +46,13 @@ function isMostlyArabic(children: ReactNode) {
 
 export function DocumentReadPage() {
   const { courseId, type = "synthese" } = useParams();
+  const navigate = useNavigate();
   const artifactType = type as ArtifactType;
   const [reloadKey, setReloadKey] = useState(0);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   const [savingTitle, setSavingTitle] = useState(false);
+  const [discarding, setDiscarding] = useState(false);
   const load = useCallback(async () => {
     void reloadKey;
     if (!courseId) {
@@ -90,6 +100,33 @@ export function DocumentReadPage() {
     }
   }
 
+  async function discardCurrentArtifact() {
+    if (!data) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      "Supprimer cet ancien resultat ? L'etape repassera a faire, mais les autres artefacts du cours seront conserves.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDiscarding(true);
+    try {
+      await discardArtifact({
+        professorId: data.document.professor.id,
+        moduleId: data.document.module.id,
+        courseId: data.document.course.id,
+        type: data.document.artifact.type,
+      });
+      navigate(`/cours/${data.document.course.id}/traitement`);
+    } finally {
+      setDiscarding(false);
+    }
+  }
+
   if (loading) {
     return <div className="empty-state">Chargement du document...</div>;
   }
@@ -104,6 +141,8 @@ export function DocumentReadPage() {
   }
 
   const { document, artifacts } = data;
+  const obsoleteStep = stepByArtifactType[document.artifact.type];
+  const isObsolete = document.course.etapes[obsoleteStep].obsolete;
   const missingArtifacts = crossLinks.filter(
     (link) => !hasArtifact(artifacts, link.type),
   );
@@ -158,6 +197,32 @@ export function DocumentReadPage() {
               </button>
             </div>
           )}
+        </div>
+      ) : null}
+
+      {isObsolete ? (
+        <div className="stale-banner">
+          <div>
+            <p className="eyebrow">Artefact obsolète</p>
+            <strong>Ce contenu reste lisible, mais il dépend d'une étape relancée.</strong>
+            <p>
+              Tu peux repartir du traitement pour produire une nouvelle version, ou
+              supprimer cet ancien résultat explicitement.
+            </p>
+          </div>
+          <div className="stale-banner__actions">
+            <Link className="tool on" to={`/cours/${document.course.id}/traitement`}>
+              Reprendre le traitement
+            </Link>
+            <button
+              className="tool danger"
+              disabled={discarding}
+              onClick={discardCurrentArtifact}
+              type="button"
+            >
+              {discarding ? "Suppression..." : "Supprimer cet ancien résultat"}
+            </button>
+          </div>
         </div>
       ) : null}
 

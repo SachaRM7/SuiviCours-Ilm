@@ -1,8 +1,10 @@
 import {
   collection,
+  doc,
   getDocs,
   orderBy,
   query,
+  updateDoc,
   type DocumentData,
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
@@ -20,12 +22,25 @@ function vocabularyFromDoc(
     translitteration: data.translitteration,
     arabe: data.arabe,
     glose: data.glose,
+    gloseAlternatives: data.gloseAlternatives ?? [],
     tags: data.tags ?? [],
     occurrences: data.occurrences ?? [],
     premiereApparition: data.premiereApparition,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
   };
+}
+
+export async function resolveVocabularyGlose(input: {
+  entryId: string;
+  glose: string;
+  remainingAlternatives: string[];
+}) {
+  await updateDoc(doc(db, "vocabulaire", input.entryId), {
+    glose: input.glose,
+    gloseAlternatives: input.remainingAlternatives,
+    updatedAt: new Date().toISOString(),
+  });
 }
 
 export async function listVocabulary() {

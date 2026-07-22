@@ -1,7 +1,11 @@
 import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAsync } from "../hooks/useAsync";
-import { listVocabulary } from "../lib/vocabularyRepository";
+import {
+  listVocabulary,
+  resolveVocabularyGlose,
+} from "../lib/vocabularyRepository";
+import type { VocabularyEntry } from "../types/domain";
 
 function normalize(value: string) {
   return value
@@ -39,7 +43,12 @@ function tagToCourseHref(tag: string) {
 }
 
 export function VocabularyPage() {
-  const load = useCallback(() => listVocabulary(), []);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [resolvingEntryId, setResolvingEntryId] = useState<string | null>(null);
+  const load = useCallback(() => {
+    void reloadKey;
+    return listVocabulary();
+  }, [reloadKey]);
   const { data, error, loading } = useAsync(load);
   const [search, setSearch] = useState("");
   const filtered = useMemo(() => {
@@ -53,6 +62,21 @@ export function VocabularyPage() {
       ).includes(needle),
     );
   }, [data, search]);
+
+  async function chooseGlose(entry: VocabularyEntry, glose: string) {
+    setResolvingEntryId(entry.id);
+
+    try {
+      await resolveVocabularyGlose({
+        entryId: entry.id,
+        glose,
+        remainingAlternatives: [],
+      });
+      setReloadKey((key) => key + 1);
+    } finally {
+      setResolvingEntryId(null);
+    }
+  }
 
   return (
     <section className="stack">
@@ -99,6 +123,32 @@ export function VocabularyPage() {
                   {entry.arabe ? <span lang="ar">{entry.arabe}</span> : null}
                 </h2>
                 <p>{entry.glose}</p>
+                {entry.gloseAlternatives?.length ? (
+                  <div className="vocab-conflict">
+                    <strong>Glose à trancher</strong>
+                    <div className="vocab-conflict__options">
+                      <button
+                        className="tool on"
+                        disabled={resolvingEntryId === entry.id}
+                        onClick={() => chooseGlose(entry, entry.glose)}
+                        type="button"
+                      >
+                        Garder : {entry.glose}
+                      </button>
+                      {entry.gloseAlternatives.map((alternative) => (
+                        <button
+                          className="tool"
+                          disabled={resolvingEntryId === entry.id}
+                          key={alternative}
+                          onClick={() => chooseGlose(entry, alternative)}
+                          type="button"
+                        >
+                          Utiliser : {alternative}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
               <div className="vocab-tags">
                 {entry.tags.map((tag) => {

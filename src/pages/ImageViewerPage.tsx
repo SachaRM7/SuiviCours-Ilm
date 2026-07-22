@@ -188,6 +188,24 @@ export function ImageViewerPage() {
         )}
       </div>
 
+      {data.course.etapes.image.obsolete ? (
+        <div className="viewer-stale">
+          <div>
+            <strong>Image obsolète</strong>
+            <p>
+              Cette fiche reste consultable, mais elle dépend d'une étape
+              relancée. Dépose une nouvelle version quand le prompt image est prêt.
+            </p>
+          </div>
+          <Link
+            className="viewer-button viewer-button--primary"
+            to={`/cours/${data.course.id}/traitement`}
+          >
+            Reprendre le traitement
+          </Link>
+        </div>
+      ) : null}
+
       <div className="viewer-check">
         <div className="viewer-check__head">
           <div>

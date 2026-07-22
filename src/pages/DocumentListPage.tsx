@@ -66,6 +66,13 @@ function imageVerificationClass(image: LibraryImage["image"]) {
     : "thumb-status thumb-status--alert";
 }
 
+const stepByArtifactType: Record<ArtifactType, keyof LibraryDocument["course"]["etapes"]> = {
+  synthese: "synthese",
+  fiche: "fiche",
+  transcription_corrigee: "transcription",
+  prompt_image: "image",
+};
+
 export function DocumentListPage() {
   const { moduleId, rayon = "syntheses" } = useParams();
   const config = rayonConfig[rayon] ?? rayonConfig.syntheses;
@@ -170,7 +177,11 @@ export function DocumentListPage() {
         <div className="docs">
           {filteredDocuments.map(({ course, artifact }) => (
             <Link
-              className="doc-row"
+              className={
+                course.etapes[stepByArtifactType[artifact.type]].obsolete
+                  ? "doc-row doc-row--obsolete"
+                  : "doc-row"
+              }
               key={`${course.id}-${artifact.id}`}
               to={`/cours/${course.id}/${artifact.type}`}
             >
@@ -178,6 +189,9 @@ export function DocumentListPage() {
               <span>
                 <strong>{course.titre || `Cours ${course.numero}`}</strong>
                 <small>{formatDate(course.date)}</small>
+                {course.etapes[stepByArtifactType[artifact.type]].obsolete ? (
+                  <em>Obsolète</em>
+                ) : null}
               </span>
               <span className="doc-row__action">Lire</span>
             </Link>
