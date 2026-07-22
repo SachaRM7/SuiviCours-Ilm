@@ -4,6 +4,7 @@ import { useAsync } from "../hooks/useAsync";
 import {
   createCourse,
   listProfessorsWithModules,
+  validateAudioFile,
   type ProfessorWithModules,
 } from "../lib/libraryRepository";
 
@@ -49,6 +50,7 @@ export function NewCoursePage() {
   const [date, setDate] = useState(isoDate(new Date()));
   const [time, setTime] = useState("20:30");
   const [titre, setTitre] = useState("");
+  const [audioFile, setAudioFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -92,6 +94,7 @@ export function NewCoursePage() {
         numero,
         titre,
         date: `${date}T${time || "00:00"}:00`,
+        audioFile,
       });
       navigate(`/cours/${courseId}/synthese/edit`);
     } catch (reason) {
@@ -217,6 +220,45 @@ export function NewCoursePage() {
               type="text"
               value={titre}
             />
+          </label>
+
+          <label className="audio-drop">
+            <input
+              accept=".m4a,.mp3,.wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/x-wav"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null;
+
+                setMessage(null);
+
+                if (!file) {
+                  setAudioFile(null);
+                  return;
+                }
+
+                try {
+                  validateAudioFile(file);
+                  setAudioFile(file);
+                } catch (reason) {
+                  event.target.value = "";
+                  setAudioFile(null);
+                  setMessage(
+                    reason instanceof Error
+                      ? reason.message
+                      : "Fichier audio invalide.",
+                  );
+                }
+              }}
+              type="file"
+            />
+            <span className="audio-drop__icon">♪</span>
+            <span>
+              <strong>
+                {audioFile ? audioFile.name : "Déposer le fichier audio"}
+              </strong>
+              <small>
+                Facultatif · stockage seul · m4a, mp3 ou wav · 200 Mo max
+              </small>
+            </span>
           </label>
 
           {message ? <p className="form-error">{message}</p> : null}

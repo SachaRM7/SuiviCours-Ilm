@@ -463,6 +463,20 @@ textarea {
   background: var(--bordeaux);
 }
 
+.audio-link {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 14px;
+  border: 1px solid var(--gold-pale);
+  border-radius: var(--radius-pill);
+  background: var(--white);
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 500;
+  padding: 8px 15px;
+  text-decoration: none;
+}
+
 .treatment-steps {
   display: grid;
   gap: 12px;
@@ -1342,6 +1356,60 @@ textarea {
   margin: 14px 0 0;
   color: var(--bordeaux);
   font-size: 13px;
+}
+
+.audio-drop {
+  position: relative;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  border: 1px dashed var(--gold-pale);
+  border-radius: var(--radius-card);
+  background:
+    linear-gradient(135deg, rgba(172, 143, 101, 0.08), transparent 55%),
+    var(--cream);
+  cursor: pointer;
+  padding: 15px 16px;
+}
+
+.audio-drop input {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.audio-drop__icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--green);
+  color: var(--gold-pale);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.audio-drop strong,
+.audio-drop small {
+  display: block;
+}
+
+.audio-drop strong {
+  overflow: hidden;
+  color: var(--green);
+  font-size: 14px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.audio-drop small {
+  margin-top: 2px;
+  color: var(--ink-soft);
+  font-size: 12px;
 }
 
 @media (max-width: 640px) {

@@ -7,8 +7,38 @@ service firebase.storage {
         && request.auth.uid == "YffF7VLfMoXrgo8TTZzlKGwHPIu1";
     }
 
+    function isAcceptedAudio() {
+      return request.resource.size <= 200 * 1024 * 1024
+        && request.resource.contentType in [
+          "audio/mpeg",
+          "audio/mp3",
+          "audio/mp4",
+          "audio/m4a",
+          "audio/x-m4a",
+          "audio/wav",
+          "audio/wave",
+          "audio/x-wav"
+        ];
+    }
+
+    function isAcceptedImage() {
+      return request.resource.size <= 20 * 1024 * 1024
+        && request.resource.contentType.matches("image/.*");
+    }
+
+    match /professeurs/{professeurId}/modules/{moduleId}/cours/{courseId}/audio/{fileName} {
+      allow read: if isAllowedUser();
+      allow write: if isAllowedUser() && isAcceptedAudio();
+    }
+
+    match /professeurs/{professeurId}/modules/{moduleId}/cours/{courseId}/images/{fileName} {
+      allow read: if isAllowedUser();
+      allow write: if isAllowedUser() && isAcceptedImage();
+    }
+
     match /{path=**} {
-      allow read, write: if isAllowedUser();
+      allow read: if isAllowedUser();
+      allow write: if false;
     }
   }
 }

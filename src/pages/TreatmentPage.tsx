@@ -343,6 +343,16 @@ export function TreatmentPage() {
             />
           ))}
         </div>
+        {data.course.audioUrl ? (
+          <a
+            className="audio-link"
+            href={data.course.audioUrl}
+            rel="noreferrer"
+            target="_blank"
+          >
+            Ouvrir l'audio stocké
+          </a>
+        ) : null}
       </header>
 
       {notice ? <div className="empty-state notice-state">{notice}</div> : null}

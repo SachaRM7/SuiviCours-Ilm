@@ -48,6 +48,19 @@ export type ModuleExportData = {
   }>;
 };
 
+const acceptedAudioTypes = new Set([
+  "audio/mpeg",
+  "audio/mp3",
+  "audio/mp4",
+  "audio/m4a",
+  "audio/x-m4a",
+  "audio/wav",
+  "audio/wave",
+  "audio/x-wav",
+]);
+const acceptedAudioExtensions = /\.(m4a|mp3|wav)$/i;
+const maxAudioSize = 200 * 1024 * 1024;
+
 function professorFromDoc(doc: QueryDocumentSnapshot<DocumentData>): Professor {
   const data = doc.data();
 
@@ -253,6 +266,7 @@ export async function createCourse(input: {
   numero: number;
   titre: string;
   date: string;
+  audioFile?: File | null;
 }) {
   const courseId = `${input.moduleId}-${input.numero}`;
   const now = new Date().toISOString();
@@ -281,6 +295,19 @@ export async function createCourse(input: {
     throw new Error(`Le cours ${input.numero} existe déjà pour ce module.`);
   }
 
+  if (input.audioFile) {
+    validateAudioFile(input.audioFile);
+  }
+
+  const audioUrl = input.audioFile
+    ? await uploadCourseAudio({
+        professorId: input.professorId,
+        moduleId: input.moduleId,
+        courseId,
+        file: input.audioFile,
+      })
+    : null;
+
   const course: Omit<Course, "id"> = {
     professeurId: input.professorId,
     moduleId: input.moduleId,
@@ -288,7 +315,7 @@ export async function createCourse(input: {
     titre: input.titre,
     titreValide: Boolean(input.titre.trim()),
     date: input.date,
-    audioUrl: null,
+    audioUrl,
     etapes: emptySteps(),
     createdAt: now,
     updatedAt: now,
@@ -300,6 +327,32 @@ export async function createCourse(input: {
   });
 
   return courseId;
+}
+
+export function validateAudioFile(file: File) {
+  if (file.size > maxAudioSize) {
+    throw new Error("Le fichier audio dépasse la limite de 200 Mo.");
+  }
+
+  if (!acceptedAudioTypes.has(file.type) && !acceptedAudioExtensions.test(file.name)) {
+    throw new Error("Format audio non accepté. Utilise un fichier m4a, mp3 ou wav.");
+  }
+}
+
+async function uploadCourseAudio(input: {
+  professorId: string;
+  moduleId: string;
+  courseId: string;
+  file: File;
+}) {
+  const safeName = input.file.name.replace(/[^\w.-]+/g, "-");
+  const storageRef = ref(
+    storage,
+    `professeurs/${input.professorId}/modules/${input.moduleId}/cours/${input.courseId}/audio/${Date.now()}-${safeName}`,
+  );
+  const uploaded = await uploadBytes(storageRef, input.file);
+
+  return getDownloadURL(uploaded.ref);
 }
 
 function stepForArtifact(type: ArtifactType): keyof Course["etapes"] {
