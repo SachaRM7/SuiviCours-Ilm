@@ -88,51 +88,53 @@ export function DocumentReadPage() {
         </p>
       </header>
 
-      <div className="cross">
-        {crossLinks.map((link) =>
-          hasArtifact(artifacts, link.type) ? (
-            <Link
-              className={
-                link.type === document.artifact.type ? "cx cx--primary" : "cx"
+      <div className="doc-toolbar">
+        <nav className="doc-tabs" aria-label="Artefacts du cours">
+          {crossLinks.map((link) =>
+            hasArtifact(artifacts, link.type) ? (
+              <Link
+                className={
+                  link.type === document.artifact.type ? "cx cx--primary" : "cx"
+                }
+                key={link.type}
+                to={`/cours/${document.course.id}/${link.type}`}
+              >
+                <span />
+                {link.label}
+              </Link>
+            ) : (
+              <span className="cx cx--missing" key={link.type}>
+                <span />
+                {link.label}
+              </span>
+            ),
+          )}
+        </nav>
+
+        <details className="doc-actions-menu">
+          <summary>Actions</summary>
+          <div className="doc-actions-menu__panel">
+            <button onClick={copyMarkdown} type="button">
+              Copier le .md
+            </button>
+            <button
+              onClick={() =>
+                downloadMarkdown({
+                  course: document.course,
+                  artifact: document.artifact,
+                  module: document.module,
+                })
               }
-              key={link.type}
-              to={`/cours/${document.course.id}/${link.type}`}
+              type="button"
             >
-              <span />
-              {link.label}
+              Télécharger le .md
+            </button>
+            <Link to={`/cours/${document.course.id}/${document.artifact.type}/edit`}>
+              Modifier
             </Link>
-          ) : (
-            <span className="cx cx--missing" key={link.type}>
-              <span />
-              {link.label}
-            </span>
-          ),
-        )}
-        <button className="cx cx--copy" onClick={copyMarkdown} type="button">
-          Copier le .md
-        </button>
-        <button
-          className="cx"
-          onClick={() =>
-            downloadMarkdown({
-              course: document.course,
-              artifact: document.artifact,
-              module: document.module,
-            })
-          }
-          type="button"
-        >
-          Télécharger le .md
-        </button>
-        <Link
-          className="cx"
-          to={`/cours/${document.course.id}/${document.artifact.type}/edit`}
-        >
-          Modifier
-        </Link>
-        <Link className="cx" to={`/cours/${document.course.id}/traitement`}>
-          Traitement
-        </Link>
+            <Link to={`/cours/${document.course.id}/traitement`}>Traitement</Link>
+          </div>
+        </details>
       </div>
 
       {missingArtifacts.length > 0 || document.artifact.type === "prompt_image" ? (

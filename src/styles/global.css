@@ -826,10 +826,18 @@ textarea {
   font-size: 13px;
 }
 
-.cross {
+.doc-toolbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.doc-tabs {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
 }
 
 .cx {
@@ -872,8 +880,79 @@ textarea {
   background: var(--cream-deep);
 }
 
-.cx--copy {
-  margin-left: auto;
+.doc-actions-menu {
+  position: relative;
+  flex: none;
+}
+
+.doc-actions-menu summary {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--gold-pale);
+  border-radius: var(--radius-pill);
+  background: var(--white);
+  color: var(--green);
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 500;
+  list-style: none;
+  padding: 9px 16px;
+}
+
+.doc-actions-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.doc-actions-menu summary::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  margin-left: 10px;
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+}
+
+.doc-actions-menu[open] summary::after {
+  transform: translateY(2px) rotate(225deg);
+}
+
+.doc-actions-menu__panel {
+  position: absolute;
+  z-index: 5;
+  right: 0;
+  top: calc(100% + 8px);
+  display: grid;
+  min-width: 210px;
+  overflow: hidden;
+  border: 1px solid var(--cream-deep);
+  border-radius: var(--radius-card);
+  background: var(--white);
+  box-shadow: 0 14px 40px rgba(24, 53, 45, 0.12);
+}
+
+.doc-actions-menu__panel a,
+.doc-actions-menu__panel button {
+  width: 100%;
+  border: 0;
+  border-bottom: 1px solid var(--cream-deep);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: 13.5px;
+  padding: 11px 13px;
+  text-align: left;
+  text-decoration: none;
+}
+
+.doc-actions-menu__panel a:hover,
+.doc-actions-menu__panel button:hover {
+  background: var(--cream);
+}
+
+.doc-actions-menu__panel :last-child {
+  border-bottom: 0;
 }
 
 .edit-actions {
@@ -1523,8 +1602,19 @@ textarea {
     padding: 24px 20px;
   }
 
-  .cx--copy {
-    margin-left: 0;
+  .doc-toolbar {
+    flex-direction: column;
+  }
+
+  .doc-actions-menu,
+  .doc-actions-menu summary {
+    width: 100%;
+  }
+
+  .doc-actions-menu__panel {
+    right: auto;
+    left: 0;
+    width: min(280px, 100%);
   }
 
   .viewer-bar {
