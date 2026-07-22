@@ -11,6 +11,7 @@ import { ImageUploadPage } from "../pages/ImageUploadPage";
 import { ModulePage } from "../pages/ModulePage";
 import { NewCoursePage } from "../pages/NewCoursePage";
 import { TreatmentPage } from "../pages/TreatmentPage";
+import { VocabularyPage } from "../pages/VocabularyPage";
 
 export function App() {
   return (
@@ -33,6 +34,7 @@ export function App() {
         <Route path="cours/:courseId/images/new" element={<ImageUploadPage />} />
         <Route path="images/:courseId/:imageId" element={<ImageViewerPage />} />
         <Route path="nouveau-cours" element={<NewCoursePage />} />
+        <Route path="vocabulaire" element={<VocabularyPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

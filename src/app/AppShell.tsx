@@ -4,6 +4,7 @@ import { useAuth } from "../features/auth/useAuth";
 const sectionLabel: Record<string, string> = {
   "/": "Cours",
   "/nouveau-cours": "Nouveau cours",
+  "/vocabulaire": "Vocabulaire",
 };
 
 export function AppShell() {
@@ -20,6 +21,7 @@ export function AppShell() {
           </NavLink>
           <nav className="main-nav" aria-label="Navigation principale">
             <NavLink to="/">Cours</NavLink>
+            <NavLink to="/vocabulaire">Vocabulaire</NavLink>
             <NavLink to="/nouveau-cours">Nouveau</NavLink>
           </nav>
         </div>
