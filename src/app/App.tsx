@@ -10,6 +10,7 @@ import { ImageViewerPage } from "../pages/ImageViewerPage";
 import { ImageUploadPage } from "../pages/ImageUploadPage";
 import { ModulePage } from "../pages/ModulePage";
 import { NewCoursePage } from "../pages/NewCoursePage";
+import { SourceValidationPage } from "../pages/SourceValidationPage";
 import { TreatmentPage } from "../pages/TreatmentPage";
 import { VocabularyPage } from "../pages/VocabularyPage";
 
@@ -29,6 +30,7 @@ export function App() {
         <Route path="modules/:moduleId" element={<ModulePage />} />
         <Route path="modules/:moduleId/:rayon" element={<DocumentListPage />} />
         <Route path="cours/:courseId/traitement" element={<TreatmentPage />} />
+        <Route path="cours/:courseId/sources" element={<SourceValidationPage />} />
         <Route path="cours/:courseId/:type" element={<DocumentReadPage />} />
         <Route path="cours/:courseId/:type/edit" element={<ArtifactEditorPage />} />
         <Route path="cours/:courseId/images/new" element={<ImageUploadPage />} />

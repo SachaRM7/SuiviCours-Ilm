@@ -431,6 +431,11 @@ export function TreatmentPage() {
                         Déposer l'image
                       </Link>
                     ) : null}
+                    {step.key === "sources" && state.fait ? (
+                      <Link className="tool" to={`/cours/${data.course.id}/sources`}>
+                        Valider les sources
+                      </Link>
+                    ) : null}
                     {state.fait ? (
                       <button
                         className="tool danger"

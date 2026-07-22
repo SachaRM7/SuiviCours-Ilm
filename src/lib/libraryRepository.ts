@@ -1,6 +1,7 @@
 import {
   collection,
   doc,
+  documentId,
   getDoc,
   getDocs,
   orderBy,
@@ -19,6 +20,7 @@ import type {
   Course,
   CourseImage,
   CourseModule,
+  CourseReference,
   LibraryDocument,
   LibraryImage,
   Professor,
@@ -115,6 +117,23 @@ function imageFromDoc(doc: QueryDocumentSnapshot<DocumentData>): CourseImage {
     verification: data.verification,
     ordre: data.ordre,
     createdAt: data.createdAt,
+  };
+}
+
+function referenceFromDoc(doc: QueryDocumentSnapshot<DocumentData>): CourseReference {
+  const data = doc.data();
+
+  return {
+    id: doc.id,
+    type: data.type,
+    texteCours: data.texteCours ?? "",
+    texteExact: data.texteExact ?? "",
+    texteArabe: data.texteArabe ?? "",
+    sourceIdentifiee: data.sourceIdentifiee ?? "",
+    statutAuto: data.statutAuto,
+    choixTexte: data.choixTexte ?? null,
+    choixSource: data.choixSource ?? null,
+    valide: data.valide ?? false,
   };
 }
 
@@ -537,6 +556,58 @@ export async function saveDetectedReferences(input: {
         },
       ),
     ),
+  );
+}
+
+export async function listCourseReferences(input: {
+  professorId: string;
+  moduleId: string;
+  courseId: string;
+}) {
+  const snapshot = await getDocs(
+    query(
+      collection(
+        db,
+        "professeurs",
+        input.professorId,
+        "modules",
+        input.moduleId,
+        "cours",
+        input.courseId,
+        "references",
+      ),
+      orderBy(documentId(), "asc"),
+    ),
+  );
+
+  return snapshot.docs.map(referenceFromDoc);
+}
+
+export async function saveReferenceDecision(input: {
+  professorId: string;
+  moduleId: string;
+  courseId: string;
+  referenceId: string;
+  choixTexte: CourseReference["choixTexte"];
+  choixSource: string | null;
+}) {
+  await updateDoc(
+    doc(
+      db,
+      "professeurs",
+      input.professorId,
+      "modules",
+      input.moduleId,
+      "cours",
+      input.courseId,
+      "references",
+      input.referenceId,
+    ),
+    {
+      choixTexte: input.choixTexte,
+      choixSource: input.choixSource,
+      valide: true,
+    },
   );
 }
 
