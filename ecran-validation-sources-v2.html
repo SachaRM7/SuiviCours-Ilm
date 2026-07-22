@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Validation des sources — Cours 14</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,500&family=Inter:wght@400;500;600&family=Amiri&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#18352D; --green-soft:#24483E;
+  --cream:#F9F4EF; --cream-deep:#F1E9E0;
+  --gold:#AC8F65; --gold-pale:#D9C6A8;
+  --bordeaux:#6B2B36;
+  --ink:#2A2622; --ink-soft:#6E6459;
+  --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--cream);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:820px;margin:0 auto;padding:0 20px 130px}
+
+header{background:var(--green);color:var(--cream);padding:18px 0}
+.hd{max-width:820px;margin:0 auto;padding:0 20px;font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600}
+.crumb{background:var(--green)}
+.crumb-in{max-width:820px;margin:0 auto;padding:0 20px 14px;font-size:13px;color:var(--gold-pale);display:flex;gap:9px;flex-wrap:wrap}
+.crumb-in a{color:var(--gold-pale);text-decoration:none}
+.crumb-in .sep{opacity:.45}
+.crumb-in .now{color:var(--cream);font-weight:500}
+
+.top{padding:30px 0 22px}
+.h1{font-family:'Cormorant Garamond',serif;font-size:31px;font-weight:600;color:var(--green);line-height:1.15}
+.lede{font-size:13.5px;color:var(--ink-soft);margin-top:4px}
+.note{background:var(--cream-deep);border-left:3px solid var(--gold);border-radius:0 var(--r) var(--r) 0;padding:13px 17px;font-size:13.5px;color:var(--ink-soft);margin-bottom:26px;line-height:1.5}
+.note b{color:var(--ink);font-weight:500}
+
+.prog{display:flex;align-items:center;gap:12px;margin-bottom:20px;font-size:13px;color:var(--ink-soft)}
+.bar{flex:1;height:5px;background:var(--cream-deep);border-radius:3px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--green);width:0;transition:width .3s}
+
+.ref{background:#fff;border:1px solid var(--cream-deep);border-radius:var(--r);margin-bottom:14px;overflow:hidden;transition:.18s}
+.ref.settled{border-color:var(--gold-pale)}
+
+.rtop{display:flex;align-items:flex-start;gap:13px;padding:17px 20px 13px}
+.rnum{font-family:'Cormorant Garamond',serif;font-size:19px;color:var(--gold);font-weight:600;flex:none;width:20px;text-align:center;line-height:1.5}
+.rmain{flex:1;min-width:0}
+.rkind{font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:5px}
+.rtext{font-size:15px;line-height:1.45}
+.rar{font-family:Amiri,serif;font-size:20px;direction:rtl;text-align:right;color:var(--green);margin-top:9px;line-height:1.9}
+
+.badge{flex:none;font-size:11px;letter-spacing:.05em;text-transform:uppercase;font-weight:600;padding:4px 10px;border-radius:20px}
+.badge.exact{background:rgba(24,53,45,.09);color:var(--green)}
+.badge.para{background:rgba(107,43,54,.1);color:var(--bordeaux)}
+.badge.allu{background:rgba(172,143,101,.16);color:#7d6134}
+.badge.none{background:var(--cream-deep);color:var(--ink-soft)}
+
+.rbody{padding:0 20px 15px 53px}
+.srcline{display:flex;gap:10px;font-size:13.5px;padding:6px 0;border-top:1px solid var(--cream-deep)}
+.srcline .k{color:var(--ink-soft);flex:none;width:140px}
+.srcline .v{font-weight:500}
+.srcline .v.empty{font-weight:400;color:var(--ink-soft);font-style:italic}
+.why{font-size:13px;color:var(--ink-soft);margin-top:10px;padding:10px 13px;background:var(--cream);border-radius:7px;line-height:1.5}
+.why b{color:var(--ink);font-weight:500}
+.exact-ar{font-family:Amiri,serif;font-size:18px;direction:rtl;text-align:right;color:var(--green);margin-top:5px;line-height:1.9}
+
+/* étage de décision */
+.stage{padding:13px 20px 16px 53px;border-top:1px solid var(--cream-deep);background:var(--cream)}
+.stage + .stage{border-top:1px solid var(--gold-pale)}
+.clabel{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-soft);font-weight:600;margin-bottom:9px}
+.clabel .step{color:var(--gold);margin-right:5px}
+.opts{display:flex;gap:8px;flex-wrap:wrap}
+.opt{font-family:inherit;font-size:13px;padding:8px 15px;border-radius:20px;cursor:pointer;border:1px solid var(--gold-pale);background:#fff;color:var(--ink);transition:.15s;text-align:left}
+.opt:hover{border-color:var(--gold)}
+.opt.on{background:var(--green);border-color:var(--green);color:var(--cream)}
+.opt.drop.on{background:var(--ink-soft);border-color:var(--ink-soft)}
+.opt small{display:block;font-size:11px;opacity:.65;margin-top:1px}
+.stage.locked{opacity:.4;pointer-events:none}
+
+.manual{margin-top:10px;display:none}
+.manual.on{display:block}
+.manual input{width:100%;padding:9px 13px;border:1px solid var(--gold-pale);border-radius:7px;font-family:inherit;font-size:14px;background:#fff;color:var(--ink)}
+.manual input:focus{outline:none;border-color:var(--gold)}
+.manual .hint{font-size:11.5px;color:var(--ink-soft);margin-top:5px}
+
+.out{margin-top:34px;background:var(--green);color:var(--cream);border-radius:var(--r);padding:24px 26px}
+.out h3{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;margin-bottom:4px}
+.out .sub{font-size:12.5px;color:var(--gold-pale);margin-bottom:16px;line-height:1.45}
+.out table{width:100%;border-collapse:collapse;font-size:13.5px}
+.out td{padding:9px 0;border-bottom:1px solid rgba(217,198,168,.18);vertical-align:top}
+.out td:first-child{color:var(--gold-pale);padding-right:16px;width:54%}
+.out td:last-child{font-weight:500}
+.out tr:last-child td{border-bottom:0}
+.out .drop{opacity:.45;font-style:italic;font-weight:400}
+.out .nosrc{color:var(--gold-pale);font-weight:400;font-style:italic}
+
+.bar-fix{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--cream-deep);padding:13px 20px;box-shadow:0 -4px 20px rgba(24,53,45,.06)}
+.bar-in{max-width:820px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.bar-in .st{font-size:13px;color:var(--ink-soft)}
+.bar-in .st b{color:var(--green)}
+.acts{display:flex;gap:9px}
+.btn{font-family:inherit;font-size:13.5px;padding:9px 19px;border-radius:20px;cursor:pointer;border:1px solid var(--gold-pale);background:#fff;color:var(--ink);transition:.15s}
+.btn:hover{border-color:var(--gold)}
+.btn.prim{background:var(--green);border-color:var(--green);color:var(--cream);font-weight:500}
+.btn.prim:hover{background:var(--green-soft);border-color:var(--green-soft)}
+.btn.prim:disabled{opacity:.4;cursor:not-allowed}
+
+@media(max-width:640px){
+  .rbody,.stage{padding-left:20px}
+  .srcline{flex-direction:column;gap:1px}
+  .srcline .k{width:auto}
+  .opts{flex-direction:column}
+  .opt{width:100%}
+}
+</style>
+</head>
+<body>
+
+<header><div class="hd">Suivi cours de ʿilm</div></header>
+<div class="crumb"><div class="crumb-in">
+  <a>Cours</a><span class="sep">›</span><a>Tawhid</a><span class="sep">›</span><a>Cours 14</a><span class="sep">›</span><span class="now">Sources</span>
+</div></div>
+
+<div class="wrap">
+
+  <div class="top">
+    <div class="h1">Validation des sources</div>
+    <div class="lede">Les trois degrés de l'Irjā' · Tawhid · Cours 14</div>
+  </div>
+
+  <div class="note">
+    Cinq références trouvées dans la synthèse. Pour chacune, tu décides ce qui figurera sur la fiche et l'image. <b>Une référence porte soit une source réelle, soit aucune ligne de source</b> — jamais de mention d'absence ou de doute.
+  </div>
+
+  <div class="prog">
+    <span>Tranchées</span>
+    <div class="bar"><i id="pbar"></i></div>
+    <span><b id="pcount">0</b> / 5</span>
+  </div>
+
+  <!-- REF 1 — EXACTE -->
+  <div class="ref" data-i="1">
+    <div class="rtop">
+      <div class="rnum">1</div>
+      <div class="rmain">
+        <div class="rkind">Hadith</div>
+        <div class="rtext">« Celui qui dit <em>lā ilāha illā Allāh</em> sincèrement de son cœur entrera au paradis. »</div>
+        <div class="rar">مَنْ قَالَ لَا إِلَهَ إِلَّا اللهُ خَالِصًا مِنْ قَلْبِهِ دَخَلَ الْجَنَّةَ</div>
+      </div>
+      <span class="badge exact">Exacte</span>
+    </div>
+    <div class="rbody">
+      <div class="srcline"><span class="k">Dans le cours</span><span class="v empty">source non donnée</span></div>
+      <div class="srcline"><span class="k">Identifiée</span><span class="v">Al-Bukhārī n°128 · Muslim n°32 — hadith de Muʿādh ibn Jabal</span></div>
+    </div>
+    <div class="stage">
+      <div class="clabel">Source imprimée</div>
+      <div class="opts">
+        <button class="opt" onclick="src(this,1,'Al-Bukhārī n°128')">Al-Bukhārī n°128</button>
+        <button class="opt" onclick="src(this,1,'Muslim n°32')">Muslim n°32</button>
+        <button class="opt drop" onclick="src(this,1,'DROP')">Ne pas inclure</button>
+        <button class="opt" onclick="src(this,1,null,1)">Saisir</button>
+      </div>
+      <div class="manual"><input placeholder="Ex. : Al-Bukhārī n°128" oninput="man(1,this.value)"><div class="hint">Repris tel quel sur la fiche.</div></div>
+    </div>
+  </div>
+
+  <!-- REF 2 — ALLUSION -->
+  <div class="ref" data-i="2">
+    <div class="rtop">
+      <div class="rnum">2</div>
+      <div class="rmain">
+        <div class="rkind">Verset</div>
+        <div class="rtext">« Celui qui veut, qu'il croie ; celui qui veut, qu'il mécroie. »</div>
+        <div class="rar">فَمَن شَاءَ فَلْيُؤْمِن وَمَن شَاءَ فَلْيَكْفُرْ</div>
+      </div>
+      <span class="badge allu">Allusion</span>
+    </div>
+    <div class="rbody">
+      <div class="srcline"><span class="k">Dans le cours</span><span class="v">« allusion à Al-Kahf »</span></div>
+      <div class="srcline"><span class="k">Identifiée</span><span class="v">Al-Kahf (18), verset 29</span></div>
+    </div>
+    <div class="stage">
+      <div class="clabel">Source imprimée</div>
+      <div class="opts">
+        <button class="opt" onclick="src(this,2,'Al-Kahf, 18:29')">Al-Kahf, 18:29</button>
+        <button class="opt" onclick="src(this,2,'Allusion à Al-Kahf, 18:29')">Allusion à Al-Kahf, 18:29</button>
+        <button class="opt drop" onclick="src(this,2,'DROP')">Ne pas inclure</button>
+        <button class="opt" onclick="src(this,2,null,1)">Saisir</button>
+      </div>
+      <div class="manual"><input placeholder="Formulation de ton choix" oninput="man(2,this.value)"></div>
+    </div>
+  </div>
+
+  <!-- REF 3 — INTROUVABLE -->
+  <div class="ref" data-i="3">
+    <div class="rtop">
+      <div class="rnum">3</div>
+      <div class="rmain">
+        <div class="rkind">Parole de savant</div>
+        <div class="rtext">« Jamais vaincu par un savant, jamais vainqueur d'un ignorant. »</div>
+      </div>
+      <span class="badge none">Introuvable</span>
+    </div>
+    <div class="rbody">
+      <div class="srcline"><span class="k">Dans le cours</span><span class="v">attribuée à l'imām al-Shāfiʿī</span></div>
+      <div class="srcline"><span class="k">Identifiée</span><span class="v empty">aucun recueil ne la rapporte avec chaîne</span></div>
+      <div class="why"><b>L'écart :</b> la formule circule largement sous le nom d'al-Shāfiʿī mais n'apparaît dans aucun de ses ouvrages connus ni dans les recueils de ses paroles. Attribution tardive probable.</div>
+    </div>
+    <div class="stage">
+      <div class="clabel">Source imprimée</div>
+      <div class="opts">
+        <button class="opt drop" onclick="src(this,3,'DROP')">Ne pas inclure<small>Recommandé</small></button>
+        <button class="opt" onclick="src(this,3,'Attribué à l\'imām al-Shāfiʿī')">Attribué à al-Shāfiʿī<small>Sans chaîne</small></button>
+        <button class="opt" onclick="src(this,3,null,1)">Saisir</button>
+      </div>
+      <div class="manual"><input placeholder="Formulation de ton choix" oninput="man(3,this.value)"></div>
+    </div>
+  </div>
+
+  <!-- REF 4 — PARAPHRASE : deux décisions -->
+  <div class="ref" data-i="4">
+    <div class="rtop">
+      <div class="rnum">4</div>
+      <div class="rmain">
+        <div class="rkind">Hadith</div>
+        <div class="rtext">« L'être humain est éprouvé en fonction de sa foi. »</div>
+      </div>
+      <span class="badge para">Paraphrase</span>
+    </div>
+    <div class="rbody">
+      <div class="srcline"><span class="k">Dit en cours</span><span class="v">« L'être humain est éprouvé en fonction de sa foi »</span></div>
+      <div class="srcline"><span class="k">Texte exact</span><span class="v">« Les plus éprouvés parmi les gens sont les prophètes, puis ceux qui leur ressemblent le plus, puis ceux qui leur ressemblent le plus. L'homme est éprouvé selon son degré de religion. »
+        <div class="exact-ar">أَشَدُّ النَّاسِ بَلَاءً الْأَنْبِيَاءُ ثُمَّ الْأَمْثَلُ فَالْأَمْثَلُ</div>
+      </span></div>
+      <div class="srcline"><span class="k">Source</span><span class="v">Al-Tirmidhī n°2398 · Ibn Mājah n°4023 — Saʿd ibn Abī Waqqāṣ</span></div>
+      <div class="why"><b>L'écart :</b> le sens est conservé, la formulation diffère. Le texte du hadith évoque d'abord l'épreuve des prophètes, puis de ceux qui s'en approchent, avant d'énoncer le principe général.</div>
+    </div>
+
+    <div class="stage">
+      <div class="clabel"><span class="step">1.</span>Texte imprimé</div>
+      <div class="opts">
+        <button class="opt" onclick="txt(this,4,'exact')">Le texte exact du hadith<small>Recommandé pour la mémorisation</small></button>
+        <button class="opt" onclick="txt(this,4,'cours')">La formulation du cours<small>Telle qu'entendue</small></button>
+      </div>
+    </div>
+
+    <div class="stage locked" id="s4b">
+      <div class="clabel"><span class="step">2.</span>Source imprimée</div>
+      <div class="opts">
+        <button class="opt" onclick="src(this,4,'Al-Tirmidhī n°2398')">Al-Tirmidhī n°2398</button>
+        <button class="opt" onclick="src(this,4,'Al-Tirmidhī n°2398 · Ibn Mājah n°4023')">Les deux recueils</button>
+        <button class="opt drop" onclick="src(this,4,'DROP')">Ne pas inclure</button>
+        <button class="opt" onclick="src(this,4,null,1)">Saisir</button>
+      </div>
+      <div class="manual"><input placeholder="Formulation de ton choix" oninput="man(4,this.value)"></div>
+    </div>
+  </div>
+
+  <!-- REF 5 — ALLUSION -->
+  <div class="ref" data-i="5">
+    <div class="rtop">
+      <div class="rnum">5</div>
+      <div class="rmain">
+        <div class="rkind">Citation</div>
+        <div class="rtext">« On amène un sage de sa famille, un sage de sa famille. »</div>
+      </div>
+      <span class="badge allu">Allusion</span>
+    </div>
+    <div class="rbody">
+      <div class="srcline"><span class="k">Dans le cours</span><span class="v">attribuée au Coran, sourate non précisée</span></div>
+      <div class="srcline"><span class="k">Identifiée</span><span class="v">An-Nisāʾ (4), verset 35 — l'arbitrage conjugal
+        <div class="exact-ar">فَابْعَثُوا حَكَمًا مِّنْ أَهْلِهِ وَحَكَمًا مِّنْ أَهْلِهَا</div>
+      </span></div>
+      <div class="why"><b>L'écart :</b> « un arbitre de sa famille et un arbitre de la sienne ». La formulation du cours en est une évocation libre, pas une citation.</div>
+    </div>
+    <div class="stage">
+      <div class="clabel">Source imprimée</div>
+      <div class="opts">
+        <button class="opt" onclick="src(this,5,'Allusion à An-Nisāʾ, 4:35')">Allusion à An-Nisāʾ, 4:35<small>Recommandé</small></button>
+        <button class="opt" onclick="src(this,5,'An-Nisāʾ, 4:35')">An-Nisāʾ, 4:35</button>
+        <button class="opt drop" onclick="src(this,5,'DROP')">Ne pas inclure</button>
+        <button class="opt" onclick="src(this,5,null,1)">Saisir</button>
+      </div>
+      <div class="manual"><input placeholder="Formulation de ton choix" oninput="man(5,this.value)"></div>
+    </div>
+  </div>
+
+  <!-- SORTIE -->
+  <div class="out">
+    <h3>Ce qui part vers la fiche et l'image</h3>
+    <div class="sub">Sources figées. Une référence sans source imprimée figure seule, sans ligne de source.</div>
+    <table>
+      <tr><td>Celui qui dit lā ilāha illā Allāh…</td><td id="o1">—</td></tr>
+      <tr><td>Celui qui veut, qu'il croie…</td><td id="o2">—</td></tr>
+      <tr><td>Jamais vaincu par un savant…</td><td id="o3">—</td></tr>
+      <tr><td id="t4">L'être humain est éprouvé…</td><td id="o4">—</td></tr>
+      <tr><td>On amène un sage de sa famille…</td><td id="o5">—</td></tr>
+    </table>
+  </div>
+
+</div>
+
+<div class="bar-fix"><div class="bar-in">
+  <div class="st"><b id="bcount">0</b> référence sur 5 tranchée</div>
+  <div class="acts">
+    <button class="btn">Enregistrer</button>
+    <button class="btn prim" id="next" disabled>Passer à la fiche →</button>
+  </div>
+</div></div>
+
+<script>
+const S={},T={};
+function stage(el){return el.closest('.stage')}
+function src(el,i,val,manual){
+  const st=stage(el);
+  st.querySelectorAll('.opt').forEach(o=>o.classList.remove('on'));
+  el.classList.add('on');
+  const m=st.querySelector('.manual');
+  if(manual){m.classList.add('on');m.querySelector('input').focus();S[i]=m.querySelector('input').value||null;}
+  else{if(m)m.classList.remove('on');S[i]=val;}
+  document.querySelector(`.ref[data-i="${i}"]`).classList.add('settled');
+  render();
+}
+function txt(el,i,which){
+  const st=stage(el);
+  st.querySelectorAll('.opt').forEach(o=>o.classList.remove('on'));
+  el.classList.add('on');
+  T[i]=which;
+  document.getElementById('s4b').classList.remove('locked');
+  render();
+}
+function man(i,v){S[i]=v||null;render()}
+function render(){
+  for(let i=1;i<=5;i++){
+    const c=S[i],cell=document.getElementById('o'+i);
+    cell.className='';
+    if(!c){cell.textContent='—';cell.style.opacity=.4;}
+    else if(c==='DROP'){cell.textContent='sans ligne de source';cell.className='nosrc';cell.style.opacity=1;}
+    else{cell.textContent=c;cell.style.opacity=1;}
+  }
+  const t4=document.getElementById('t4');
+  t4.textContent = T[4]==='exact'
+    ? 'Les plus éprouvés parmi les gens sont les prophètes…'
+    : T[4]==='cours' ? 'L\'être humain est éprouvé en fonction de sa foi'
+    : 'L\'être humain est éprouvé…';
+  let n=0;
+  for(let i=1;i<=5;i++){
+    if(i===4){if(T[4]&&S[4])n++;}
+    else if(S[i])n++;
+  }
+  document.getElementById('pcount').textContent=n;
+  document.getElementById('bcount').textContent=n;
+  document.getElementById('pbar').style.width=(n/5*100)+'%';
+  document.getElementById('next').disabled=n<5;
+}
+render();
+</script>
+</body>
+</html>

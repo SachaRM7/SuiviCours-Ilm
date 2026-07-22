@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nouveau cours</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#18352D; --green-soft:#24483E;
+  --cream:#F9F4EF; --cream-deep:#F1E9E0;
+  --gold:#AC8F65; --gold-pale:#D9C6A8;
+  --bordeaux:#6B2B36;
+  --ink:#2A2622; --ink-soft:#6E6459;
+  --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--cream);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:640px;margin:0 auto;padding:0 20px 100px}
+
+header{background:var(--green);color:var(--cream);padding:18px 0}
+.hd{max-width:640px;margin:0 auto;padding:0 20px;font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600}
+.crumb{background:var(--green)}
+.crumb-in{max-width:640px;margin:0 auto;padding:0 20px 14px;font-size:13px;color:var(--gold-pale);display:flex;gap:9px}
+.crumb-in a{color:var(--gold-pale);text-decoration:none}
+.crumb-in .sep{opacity:.45}
+.crumb-in .now{color:var(--cream);font-weight:500}
+
+.top{padding:30px 0 8px}
+.h1{font-family:'Cormorant Garamond',serif;font-size:31px;font-weight:600;color:var(--green);line-height:1.15}
+.lede{font-size:13.5px;color:var(--ink-soft);margin-top:4px}
+
+/* proposition */
+.guess{
+  background:var(--green);color:var(--cream);border-radius:var(--r);
+  padding:20px 22px;margin:24px 0 18px;
+}
+.guess .eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-pale);font-weight:600;margin-bottom:9px}
+.guess .big{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;line-height:1.2}
+.guess .sub{font-size:13.5px;color:var(--gold-pale);margin-top:5px;line-height:1.5}
+.guess .why{font-size:12px;color:rgba(217,198,168,.72);margin-top:11px;padding-top:11px;border-top:1px solid rgba(217,198,168,.2);line-height:1.5}
+.guess .acts{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.gbtn{
+  font-family:inherit;font-size:13.5px;padding:9px 18px;border-radius:20px;cursor:pointer;
+  border:1px solid var(--gold);background:var(--gold);color:var(--green);font-weight:500;transition:.15s;
+}
+.gbtn:hover{background:var(--gold-pale);border-color:var(--gold-pale)}
+.gbtn.ghost{background:transparent;color:var(--gold-pale);border-color:rgba(217,198,168,.4);font-weight:400}
+.gbtn.ghost:hover{background:transparent;color:var(--cream);border-color:var(--gold-pale)}
+
+/* formulaire */
+.form{display:none}
+.form.on{display:block}
+.field{margin-bottom:18px}
+.lab{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);font-weight:600;margin-bottom:7px}
+.seg{display:flex;gap:7px;flex-wrap:wrap}
+.sbtn{
+  font-family:inherit;font-size:13.5px;padding:9px 16px;border-radius:20px;cursor:pointer;
+  border:1px solid var(--gold-pale);background:#fff;color:var(--ink);transition:.15s;text-align:left;
+}
+.sbtn:hover{border-color:var(--gold)}
+.sbtn.on{background:var(--green);border-color:var(--green);color:var(--cream)}
+.sbtn small{display:block;font-size:11px;opacity:.6;margin-top:1px}
+
+input[type=text],input[type=date],input[type=time],select{
+  width:100%;padding:11px 14px;border:1px solid var(--cream-deep);border-radius:8px;
+  font-family:inherit;font-size:15px;background:#fff;color:var(--ink);
+}
+input:focus,select:focus{outline:none;border-color:var(--gold)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+.numline{
+  display:flex;align-items:center;gap:14px;background:#fff;border:1px solid var(--cream-deep);
+  border-radius:8px;padding:13px 16px;
+}
+.numline .n{font-family:'Cormorant Garamond',serif;font-size:30px;font-weight:600;color:var(--green);line-height:1}
+.numline .t{flex:1;font-size:13px;color:var(--ink-soft);line-height:1.4}
+.numline button{
+  font-family:inherit;font-size:12.5px;padding:6px 13px;border-radius:20px;cursor:pointer;
+  border:1px solid var(--gold-pale);background:transparent;color:var(--ink-soft);
+}
+.numline button:hover{border-color:var(--gold);color:var(--ink)}
+
+.opt-title{
+  border:1px dashed var(--cream-deep);border-radius:8px;padding:13px 16px;background:transparent;
+}
+.opt-title .t{font-size:13px;color:var(--ink-soft);line-height:1.5}
+.opt-title .t b{color:var(--ink);font-weight:500}
+.opt-title input{margin-top:10px;border-color:var(--gold-pale)}
+
+/* audio */
+.drop{
+  border:1px dashed var(--gold-pale);border-radius:var(--r);padding:24px 20px;text-align:center;
+  background:#fff;cursor:pointer;transition:.15s;
+}
+.drop:hover{border-color:var(--gold);background:var(--cream-deep)}
+.drop .ic{font-size:22px;color:var(--gold);margin-bottom:6px}
+.drop .t{font-size:14px;font-weight:500}
+.drop .d{font-size:12.5px;color:var(--ink-soft);margin-top:3px}
+.skip{font-size:12.5px;color:var(--ink-soft);text-align:center;margin-top:10px;line-height:1.5}
+
+.bar-fix{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--cream-deep);padding:13px 20px;box-shadow:0 -4px 20px rgba(24,53,45,.06)}
+.bar-in{max-width:640px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:14px}
+.bar-in .st{font-size:13px;color:var(--ink-soft)}
+.btn{font-family:inherit;font-size:13.5px;padding:10px 20px;border-radius:20px;cursor:pointer;border:1px solid var(--gold-pale);background:#fff;color:var(--ink)}
+.btn.prim{background:var(--green);border-color:var(--green);color:var(--cream);font-weight:500}
+.btn.prim:hover{background:var(--green-soft);border-color:var(--green-soft)}
+
+@media(max-width:560px){
+  .two{grid-template-columns:1fr}
+  .seg{flex-direction:column}
+  .sbtn{width:100%}
+}
+</style>
+</head>
+<body>
+
+<header><div class="hd">Suivi cours de ʿilm</div></header>
+<div class="crumb"><div class="crumb-in">
+  <a>Cours</a><span class="sep">›</span><span class="now">Nouveau cours</span>
+</div></div>
+
+<div class="wrap">
+
+  <div class="top">
+    <div class="h1">Nouveau cours</div>
+    <div class="lede">Mardi 21 juillet 2026, 07h12</div>
+  </div>
+
+  <!-- proposition -->
+  <div class="guess" id="guess">
+    <div class="eyebrow">Proposition</div>
+    <div class="big">Tawhid · Cours 15</div>
+    <div class="sub">Cheikh Hatim Al-Maliki · lundi 20 juillet, 20h30 – 21h30</div>
+    <div class="why">Tes cours avec le Cheikh ont lieu les lundis et jeudis de 20h30 à 21h30. Le dernier enregistré est le cours 14 du 18 juillet.</div>
+    <div class="acts">
+      <button class="gbtn" onclick="accept()">C'est ça</button>
+      <button class="gbtn ghost" onclick="open_()">Modifier</button>
+    </div>
+  </div>
+
+  <!-- formulaire -->
+  <div class="form" id="form">
+
+    <div class="field">
+      <div class="lab">Enseignant</div>
+      <div class="seg">
+        <button class="sbtn on" onclick="pick(this)">Cheikh Hatim Al-Maliki<small>lundi et jeudi · 20h30</small></button>
+        <button class="sbtn" onclick="pick(this)">Ibrahim<small>dimanche après Asr</small></button>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="lab">Module</div>
+      <div class="seg">
+        <button class="sbtn on" onclick="pick(this)">Tawhid<small>14 cours · en cours</small></button>
+        <button class="sbtn" onclick="pick(this)">Le repentir<small>à venir</small></button>
+        <button class="sbtn" onclick="pick(this)">+ Nouveau module</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="lab">Numéro</div>
+      <div class="numline">
+        <div class="n">15</div>
+        <div class="t">Suit le cours 14 du 18 juillet.<br>Le numéro repart à 1 à chaque nouveau module.</div>
+        <button>Changer</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="lab">Date et heure</div>
+      <div class="two">
+        <input type="date" value="2026-07-20">
+        <input type="time" value="20:30">
+      </div>
+    </div>
+
+    <div class="field">
+      <div class="lab">Titre <span style="text-transform:none;letter-spacing:0;font-weight:400">— optionnel</span></div>
+      <div class="opt-title">
+        <div class="t"><b>Laisse vide.</b> Le titre sera proposé automatiquement à partir de la synthèse, et tu pourras le corriger à ce moment-là.</div>
+        <input type="text" placeholder="Ou saisis-le maintenant si tu le connais déjà">
+      </div>
+    </div>
+
+  </div>
+
+  <!-- audio -->
+  <div class="field" style="margin-top:24px">
+    <div class="lab">Enregistrement</div>
+    <div class="drop">
+      <div class="ic">↑</div>
+      <div class="t">Déposer le fichier audio</div>
+      <div class="d">Pour le garder à portée pendant la transcription</div>
+    </div>
+    <div class="skip">Facultatif — l'audio passe par Notebook Gemini, l'app ne fait que le stocker.</div>
+  </div>
+
+</div>
+
+<div class="bar-fix"><div class="bar-in">
+  <div class="st">Tawhid · Cours 15</div>
+  <button class="btn prim">Créer et commencer</button>
+</div></div>
+
+<script>
+function open_(){
+  document.getElementById('guess').style.display='none';
+  document.getElementById('form').classList.add('on');
+}
+function accept(){
+  document.getElementById('guess').style.display='none';
+  document.getElementById('form').classList.add('on');
+  document.querySelectorAll('.form input,.form .sbtn,.form button').forEach(e=>e.style.pointerEvents='');
+}
+function pick(el){
+  el.parentElement.querySelectorAll('.sbtn').forEach(b=>b.classList.remove('on'));
+  el.classList.add('on');
+}
+</script>
+</body>
+</html>

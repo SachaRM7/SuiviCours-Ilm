@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Suivi cours de ʿilm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Inter:wght@400;500;600&family=Amiri&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#18352D; --green-soft:#24483E;
+  --cream:#F9F4EF; --cream-deep:#F1E9E0;
+  --gold:#AC8F65; --gold-pale:#D9C6A8;
+  --bordeaux:#6B2B36;
+  --ink:#2A2622; --ink-soft:#6E6459;
+  --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--cream);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:920px;margin:0 auto;padding:0 20px 80px}
+
+header{background:var(--green);color:var(--cream);padding:18px 0}
+.hd{max-width:920px;margin:0 auto;padding:0 20px;display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.brand{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;letter-spacing:.01em}
+.hd nav{display:flex;gap:20px;font-size:13.5px}
+.hd nav a{color:var(--gold-pale);text-decoration:none;padding-bottom:3px;border-bottom:1px solid transparent;cursor:pointer}
+.hd nav a.on{color:var(--cream);border-color:var(--gold)}
+
+.crumb{background:var(--green)}
+.crumb-in{max-width:920px;margin:0 auto;padding:0 20px 14px;font-size:13px;color:var(--gold-pale);display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.crumb-in a{color:var(--gold-pale);text-decoration:none;cursor:pointer}
+.crumb-in a:hover{color:var(--cream)}
+.crumb-in .sep{opacity:.45}
+.crumb-in .now{color:var(--cream);font-weight:500}
+
+.view{display:none;padding-top:30px}
+.view.on{display:block}
+.h1{font-family:'Cormorant Garamond',serif;font-size:31px;font-weight:600;color:var(--green);margin-bottom:3px;line-height:1.15}
+.lede{font-size:13.5px;color:var(--ink-soft);margin-bottom:26px}
+
+/* modules */
+.profblock{margin-bottom:34px}
+.profname{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:11px}
+.mcard{background:#fff;border:1px solid var(--cream-deep);border-radius:var(--r);padding:17px 20px;margin-bottom:10px;cursor:pointer;display:flex;align-items:center;gap:16px;transition:.15s}
+.mcard:hover{border-color:var(--gold-pale);transform:translateY(-1px)}
+.mcard .t{flex:1;min-width:0}
+.mcard h3{font-family:'Cormorant Garamond',serif;font-size:23px;font-weight:600;color:var(--green);line-height:1.2}
+.mcard .sub{font-size:12.5px;color:var(--ink-soft);margin-top:2px}
+.slug{font-size:11px;color:var(--gold);background:rgba(172,143,101,.13);padding:3px 9px;border-radius:20px;flex:none;display:inline-block}
+.arrow{width:8px;height:8px;border-right:1.6px solid var(--gold);border-top:1.6px solid var(--gold);transform:rotate(45deg);flex:none}
+
+/* rayons */
+.shelves{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:26px}
+.shelf{background:#fff;border:1px solid var(--cream-deep);border-radius:var(--r);padding:22px;cursor:pointer;transition:.15s}
+.shelf:hover{border-color:var(--gold-pale);transform:translateY(-1px)}
+.shelf .cnt{font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:600;color:var(--green);line-height:1}
+.shelf h4{font-size:15px;font-weight:600;margin-top:6px}
+.shelf .d{font-size:12.5px;color:var(--ink-soft);margin-top:3px}
+.shelf.arch{background:transparent;border-style:dashed}
+.shelf.arch .cnt{color:var(--ink-soft)}
+.todo{background:var(--cream-deep);border:1px solid var(--gold-pale);border-left:3px solid var(--bordeaux);border-radius:var(--r);padding:14px 18px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.todo .l{font-size:13.5px}
+.todo .l b{color:var(--bordeaux)}
+.todo .r{font-size:12.5px;color:var(--ink-soft)}
+
+/* listes */
+.tools{display:flex;gap:7px;margin-bottom:14px;flex-wrap:wrap}
+.tool{font-size:12.5px;padding:5px 13px;border-radius:20px;cursor:pointer;border:1px solid var(--gold-pale);background:#fff;color:var(--ink-soft);font-family:inherit;transition:.15s}
+.tool:hover{border-color:var(--gold);color:var(--ink)}
+.tool.on{background:var(--green);border-color:var(--green);color:var(--cream)}
+.search{width:100%;padding:10px 14px;border:1px solid var(--cream-deep);border-radius:var(--r);font-family:inherit;font-size:14px;background:#fff;color:var(--ink);margin-bottom:14px}
+.search:focus{outline:none;border-color:var(--gold)}
+.docs{background:#fff;border:1px solid var(--cream-deep);border-radius:var(--r);overflow:hidden}
+.doc{display:grid;grid-template-columns:46px 1fr auto;align-items:center;gap:14px;padding:13px 18px;border-bottom:1px solid var(--cream-deep);cursor:pointer;transition:background .13s}
+.doc:last-child{border-bottom:0}
+.doc:hover{background:var(--cream)}
+.doc .n{font-family:'Cormorant Garamond',serif;font-size:20px;color:var(--green);text-align:center;font-weight:600}
+.doc .t{font-weight:500;line-height:1.35}
+.doc .t .d{font-size:12.5px;color:var(--ink-soft);font-weight:400;margin-top:1px}
+.doc .go{font-size:12px;color:var(--gold)}
+
+/* grille images */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.thumb{background:#fff;border:1px solid var(--cream-deep);border-radius:var(--r);overflow:hidden;cursor:pointer;transition:.15s}
+.thumb:hover{border-color:var(--gold-pale);transform:translateY(-2px)}
+.ph{aspect-ratio:1/1.414;background:linear-gradient(160deg,#1d3b32,#18352D);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:14px;text-align:center}
+.ph .c{font-family:'Cormorant Garamond',serif;font-size:26px;color:var(--gold-pale);font-weight:600}
+.ph .s{font-size:10.5px;color:rgba(249,244,239,.55);letter-spacing:.1em;text-transform:uppercase}
+.thumb .cap{padding:9px 11px;font-size:12.5px;line-height:1.3}
+.thumb .cap .d{color:var(--ink-soft);font-size:11.5px;margin-top:2px}
+
+/* ---------- LECTURE D'UN DOCUMENT ---------- */
+.dochead{border-bottom:1px solid var(--cream-deep);padding-bottom:18px;margin-bottom:22px}
+.dockind{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:5px}
+.dochead h1{font-family:'Cormorant Garamond',serif;font-size:33px;font-weight:600;color:var(--green);line-height:1.15}
+.docmeta{font-size:13px;color:var(--ink-soft);margin-top:5px}
+
+/* barre liens croisés */
+.cross{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:26px}
+.cx{
+  display:inline-flex;align-items:center;gap:8px;
+  background:#fff;border:1px solid var(--cream-deep);border-radius:20px;
+  padding:7px 15px;font-size:13px;cursor:pointer;font-family:inherit;color:var(--ink);
+  transition:.15s;
+}
+.cx:hover{border-color:var(--gold);background:var(--cream-deep)}
+.cx.miss{border-style:dashed;color:var(--ink-soft);cursor:default}
+.cx.miss:hover{border-color:var(--cream-deep);background:#fff}
+.cx .dot{width:6px;height:6px;border-radius:50%;background:var(--gold)}
+.cx.miss .dot{background:var(--cream-deep)}
+.cx.prim{background:var(--green);border-color:var(--green);color:var(--cream)}
+.cx.prim:hover{background:var(--green-soft);border-color:var(--green-soft)}
+.cx.prim .dot{background:var(--gold-pale)}
+
+/* corps markdown */
+.md{background:#fff;border:1px solid var(--cream-deep);border-radius:var(--r);padding:34px 38px;max-width:100%}
+.md h2{font-family:'Cormorant Garamond',serif;font-size:26px;color:var(--green);font-weight:600;margin:30px 0 10px;line-height:1.2}
+.md h2:first-child{margin-top:0}
+.md h3{font-size:16px;font-weight:600;margin:22px 0 7px;color:var(--green)}
+.md p{margin-bottom:13px}
+.md ul,.md ol{margin:0 0 14px 20px}
+.md li{margin-bottom:6px}
+.md blockquote{border-left:2px solid var(--gold);padding-left:16px;margin:16px 0;font-family:'Cormorant Garamond',serif;font-size:19px;font-style:italic;color:var(--green);line-height:1.45}
+.md .ar{font-family:Amiri,serif;font-size:21px;direction:rtl;text-align:right;color:var(--green);margin:8px 0}
+.md table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px}
+.md th{background:var(--cream);text-align:left;padding:9px 12px;font-weight:600;font-size:12.5px;letter-spacing:.03em;color:var(--green);border-bottom:1px solid var(--gold-pale)}
+.md td{padding:9px 12px;border-bottom:1px solid var(--cream-deep);vertical-align:top}
+.md hr{border:0;border-top:1px solid var(--cream-deep);margin:26px 0}
+.md .src{font-size:12.5px;color:var(--ink-soft);font-style:italic}
+
+/* ---------- VISIONNEUSE ---------- */
+.lb{
+  position:fixed;inset:0;background:rgba(20,32,28,.94);z-index:100;
+  display:none;flex-direction:column;
+}
+.lb.on{display:flex}
+.lbbar{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:14px 20px;flex-wrap:wrap;
+}
+.lbtitle{color:var(--cream);font-size:14px}
+.lbtitle b{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;display:block}
+.lbtitle .m{color:var(--gold-pale);font-size:12px;margin-top:1px}
+.lbacts{display:flex;gap:8px;align-items:center}
+.lbbtn{
+  background:transparent;border:1px solid rgba(217,198,168,.4);color:var(--gold-pale);
+  border-radius:20px;padding:7px 15px;font-size:13px;font-family:inherit;cursor:pointer;transition:.15s;
+}
+.lbbtn:hover{border-color:var(--gold-pale);color:var(--cream)}
+.lbbtn.dl{background:var(--gold);border-color:var(--gold);color:var(--green);font-weight:500}
+.lbbtn.dl:hover{background:var(--gold-pale);border-color:var(--gold-pale)}
+.lbstage{flex:1;display:flex;align-items:center;justify-content:center;padding:0 20px 20px;min-height:0}
+.lbstage img{max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;box-shadow:0 8px 40px rgba(0,0,0,.4)}
+.lbfake{
+  width:min(560px,90vw);aspect-ratio:1/1.414;max-height:100%;
+  background:linear-gradient(160deg,#1d3b32,#18352D);border-radius:4px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  box-shadow:0 8px 40px rgba(0,0,0,.4);
+}
+.lbfake .c{font-family:'Cormorant Garamond',serif;font-size:64px;color:var(--gold-pale);font-weight:600}
+.lbfake .s{font-size:12px;color:rgba(249,244,239,.5);letter-spacing:.14em;text-transform:uppercase}
+.lbprompt{
+  max-width:920px;margin:0 auto;width:100%;padding:0 20px 18px;
+}
+.lbprompt summary{
+  color:var(--gold-pale);font-size:12.5px;cursor:pointer;list-style:none;
+  padding:8px 0;border-top:1px solid rgba(217,198,168,.2);
+}
+.lbprompt summary::-webkit-details-marker{display:none}
+.lbprompt summary:before{content:'▸ ';transition:.15s}
+.lbprompt[open] summary:before{content:'▾ '}
+.lbprompt pre{
+  background:rgba(0,0,0,.25);color:rgba(249,244,239,.72);font-size:11.5px;line-height:1.5;
+  padding:14px;border-radius:6px;max-height:180px;overflow:auto;white-space:pre-wrap;
+  font-family:ui-monospace,monospace;margin-top:8px;
+}
+
+@media(max-width:640px){
+  .shelves{grid-template-columns:1fr}
+  .md{padding:24px 20px}
+  .dochead h1{font-size:27px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd">
+    <div class="brand">Suivi cours de ʿilm</div>
+    <nav>
+      <a class="on" onclick="go('home')">Cours</a>
+      <a onclick="go('vocab')">Vocabulaire</a>
+      <a onclick="go('prompts')">Prompts</a>
+    </nav>
+  </div>
+</header>
+
+<div class="crumb"><div class="crumb-in" id="cr"></div></div>
+
+<div class="wrap">
+
+<!-- HOME -->
+<div class="view on" id="v-home">
+  <div class="h1">Mes cours</div>
+  <div class="lede">Deux enseignants, trois modules.</div>
+
+  <div class="profblock">
+    <div class="profname">Cheikh Hatim Al-Maliki</div>
+    <div class="mcard" onclick="go('module')">
+      <div class="t"><h3>Tawhid</h3><div class="sub">Module 1 · 14 cours · depuis mars 2026</div></div>
+      <span class="slug">#Tawhid</span><div class="arrow"></div>
+    </div>
+    <div class="mcard" onclick="go('module')">
+      <div class="t"><h3>Le repentir</h3><div class="sub">Module 2 · à venir</div></div>
+      <span class="slug">#Tawbah</span><div class="arrow"></div>
+    </div>
+  </div>
+
+  <div class="profblock">
+    <div class="profname">Ibrahim</div>
+    <div class="mcard" onclick="go('module')">
+      <div class="t"><h3>Fiqh des actes d'adoration</h3><div class="sub">3 cours · depuis juin 2026</div></div>
+      <span class="slug">#FiqhIbadat</span><div class="arrow"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODULE -->
+<div class="view" id="v-module">
+  <div class="h1">Tawhid</div>
+  <div class="lede">Cheikh Hatim Al-Maliki · Module 1 · 14 cours</div>
+  <div class="shelves">
+    <div class="shelf" onclick="go('list')"><div class="cnt">12</div><h4>Synthèses</h4><div class="d">Le cours complet, structuré</div></div>
+    <div class="shelf" onclick="go('list')"><div class="cnt">11</div><h4>Fiches de révision</h4><div class="d">L'essentiel sur une page</div></div>
+    <div class="shelf" onclick="go('images')"><div class="cnt">11</div><h4>Fiches images</h4><div class="d">À afficher, à mémoriser</div></div>
+    <div class="shelf arch" onclick="go('list')"><div class="cnt">14</div><h4>Transcriptions</h4><div class="d">Archive · le verbatim corrigé</div></div>
+  </div>
+  <div class="todo" onclick="go('pipeline')">
+    <div class="l"><b>3 cours</b> attendent une étape</div>
+    <div class="r">Voir ce qu'il reste à produire →</div>
+  </div>
+</div>
+
+<!-- LISTE -->
+<div class="view" id="v-list">
+  <div class="h1">Synthèses</div>
+  <div class="lede">Tawhid · 12 documents</div>
+  <input class="search" placeholder="Chercher dans les synthèses…">
+  <div class="tools">
+    <button class="tool on">Récents d'abord</button>
+    <button class="tool">Par numéro</button>
+  </div>
+  <div class="docs">
+    <div class="doc" onclick="go('read')"><div class="n">14</div><div class="t">Les trois degrés de l'Irjā'<div class="d">18 juillet 2026</div></div><div class="go">Lire</div></div>
+    <div class="doc" onclick="go('read')"><div class="n">13</div><div class="t">La foi et ses branches<div class="d">11 juillet 2026</div></div><div class="go">Lire</div></div>
+    <div class="doc" onclick="go('read')"><div class="n">12</div><div class="t">Les conditions de la shahāda<div class="d">4 juillet 2026</div></div><div class="go">Lire</div></div>
+    <div class="doc" onclick="go('read')"><div class="n">11</div><div class="t">Tawhid al-ulūhiyya<div class="d">27 juin 2026</div></div><div class="go">Lire</div></div>
+    <div class="doc" onclick="go('read')"><div class="n">9</div><div class="t">L'unicité dans les noms et attributs<div class="d">13 juin 2026</div></div><div class="go">Lire</div></div>
+  </div>
+</div>
+
+<!-- IMAGES -->
+<div class="view" id="v-images">
+  <div class="h1">Fiches images</div>
+  <div class="lede">Tawhid · 11 fiches</div>
+  <div class="tools">
+    <button class="tool on">Récents d'abord</button>
+    <button class="tool">Par numéro</button>
+  </div>
+  <div class="grid">
+    <div class="thumb" onclick="lb(14,'Les trois degrés de l\'Irjā\'','18 juillet 2026')"><div class="ph"><div class="c">14</div><div class="s">Irjā'</div></div><div class="cap">Les trois degrés de l'Irjā'<div class="d">18 juil.</div></div></div>
+    <div class="thumb" onclick="lb(13,'La foi et ses branches','11 juillet 2026')"><div class="ph"><div class="c">13</div><div class="s">Foi</div></div><div class="cap">La foi et ses branches<div class="d">11 juil.</div></div></div>
+    <div class="thumb" onclick="lb(11,'Tawhid al-ulūhiyya','27 juin 2026')"><div class="ph"><div class="c">11</div><div class="s">Ulūhiyya</div></div><div class="cap">Tawhid al-ulūhiyya<div class="d">27 juin</div></div></div>
+    <div class="thumb" onclick="lb(9,'L\'unicité dans les noms et attributs','13 juin 2026')"><div class="ph"><div class="c">9</div><div class="s">Attributs</div></div><div class="cap">Noms et attributs<div class="d">13 juin</div></div></div>
+    <div class="thumb" onclick="lb(8,'Les piliers de la foi','6 juin 2026')"><div class="ph"><div class="c">8</div><div class="s">Piliers</div></div><div class="cap">Les piliers de la foi<div class="d">6 juin</div></div></div>
+    <div class="thumb" onclick="lb(7,'Le shirk majeur','30 mai 2026')"><div class="ph"><div class="c">7</div><div class="s">Shirk</div></div><div class="cap">Le shirk majeur<div class="d">30 mai</div></div></div>
+  </div>
+</div>
+
+<!-- ===== LECTURE ===== -->
+<div class="view" id="v-read">
+  <div class="dochead">
+    <div class="dockind">Synthèse</div>
+    <h1>Les trois degrés de l'Irjā'</h1>
+    <div class="docmeta">Tawhid · Cours 14 · Cheikh Hatim Al-Maliki · 18 juillet 2026</div>
+  </div>
+
+  <div class="cross">
+    <button class="cx prim" onclick="go('read')"><span class="dot"></span>Fiche de révision</button>
+    <button class="cx" onclick="lb(14,'Les trois degrés de l\'Irjā\'','18 juillet 2026')"><span class="dot"></span>Fiche image</button>
+    <button class="cx" onclick="go('read')"><span class="dot"></span>Transcription</button>
+    <button class="cx miss"><span class="dot"></span>Sources — à valider</button>
+  </div>
+
+  <div class="md">
+    <h2>Résumé introductif</h2>
+    <p>Le Cheikh part d'un constat : la catastrophe n'est pas que l'islām nous échappe, mais de croire le comprendre et le posséder alors qu'on ne l'a pas. De cette compréhension illusoire naît l'<em>Irjā'</em> — réduire la foi à ce qu'il y a dans le cœur en la déconnectant des actes.</p>
+    <p>Le cours retrace la diffusion de cette dérive en trois degrés successifs : théologique, spirituel, puis culturel.</p>
+
+    <h2>1. Préalable méthodologique</h2>
+    <p>Avec l'ignorant, pas de discussion possible : son ignorance tient lieu de savoir. D'où le premier élément de la science du débat, sans lequel il n'y a pas de débat : le <em>Taḥrīr maḥall al-nizāʿ</em></p>
+    <div class="ar">تحرير محل النزاع</div>
+    <p>— établir les points d'accord qui serviront de référence commune.</p>
+    <blockquote>Expliquer l'évident est déjà une humiliation — pour celui qui explique comme pour celui qui demande.</blockquote>
+
+    <h2>2. Séquence historique</h2>
+    <table>
+      <tr><th>Degré</th><th>Époque</th><th>Nature</th></tr>
+      <tr><td>Théologique</td><td>2ᵉ s. de l'hégire</td><td>Débat théorique d'une minorité de savants, sans prise sur le réel</td></tr>
+      <tr><td>Spirituel</td><td>À partir du 5ᵉ s.</td><td>Conversions massives ; les peuples épousent la Sharīʿah mais importent une part de leur ancien dogme</td></tr>
+      <tr><td>Culturel</td><td>Aujourd'hui</td><td>La minimisation du péché devient la règle de base</td></tr>
+    </table>
+
+    <h2>Hadith fondateur</h2>
+    <div class="ar">مَنْ قَالَ لَا إِلَهَ إِلَّا اللهُ خَالِصًا مِنْ قَلْبِهِ دَخَلَ الْجَنَّةَ</div>
+    <p>« Celui qui dit <em>lā ilāha illā Allāh</em> sincèrement de son cœur entrera au paradis. »</p>
+    <p class="src">Source non précisée dans le cours</p>
+
+    <hr>
+    <h2>Points de définition</h2>
+    <table>
+      <tr><th>Terme</th><th>Graphie</th><th>Glose</th></tr>
+      <tr><td>Irjā'</td><td>إرجاء</td><td>Foi réduite au cœur, coupée des actes</td></tr>
+      <tr><td>Al-ʿUjb</td><td>العجب</td><td>Auto-satisfaction ; branche du Shirk</td></tr>
+      <tr><td>Taḥrīr maḥall al-nizāʿ</td><td>تحرير محل النزاع</td><td>Délimiter le point de litige</td></tr>
+    </table>
+  </div>
+</div>
+
+<!-- PIPELINE -->
+<div class="view" id="v-pipeline">
+  <div class="h1">À terminer</div>
+  <div class="lede">Tawhid · 3 cours en attente</div>
+  <div class="docs">
+    <div class="doc"><div class="n">14</div><div class="t">Les trois degrés de l'Irjā'<div class="d">Étape suivante : recherche des sources</div></div><div class="go" style="color:var(--bordeaux)">Reprendre</div></div>
+    <div class="doc"><div class="n">12</div><div class="t">Les conditions de la shahāda<div class="d">Étape suivante : génération de l'image</div></div><div class="go" style="color:var(--bordeaux)">Reprendre</div></div>
+    <div class="doc"><div class="n">10</div><div class="t">Les catégories du shirk<div class="d">Étape suivante : synthèse</div></div><div class="go" style="color:var(--bordeaux)">Reprendre</div></div>
+  </div>
+</div>
+
+<!-- VOCAB -->
+<div class="view" id="v-vocab">
+  <div class="h1">Vocabulaire</div>
+  <div class="lede">47 termes · tous modules</div>
+  <input class="search" placeholder="Chercher un terme…">
+  <div class="docs">
+    <div class="doc" style="grid-template-columns:1fr auto"><div class="t">Irjā' — إرجاء<div class="d">Foi réduite au cœur, coupée des actes</div></div><div><span class="slug">#Tawhid_C12</span> <span class="slug">#Tawhid_C14</span></div></div>
+    <div class="doc" style="grid-template-columns:1fr auto"><div class="t">Al-ʿUjb — العجب<div class="d">Auto-satisfaction ; branche du Shirk</div></div><div><span class="slug">#Tawhid_C14</span></div></div>
+    <div class="doc" style="grid-template-columns:1fr auto"><div class="t">Ṭahāra — طهارة<div class="d">Pureté rituelle</div></div><div><span class="slug">#FiqhIbadat_C02</span></div></div>
+  </div>
+</div>
+
+<!-- PROMPTS -->
+<div class="view" id="v-prompts">
+  <div class="h1">Prompts</div>
+  <div class="lede">Les 6 étapes du pipeline, versionnées</div>
+  <div class="docs">
+    <div class="doc"><div class="n">1</div><div class="t">Transcription verbatim<div class="d">Pour Notebook Gemini · v2</div></div><div class="go">Copier</div></div>
+    <div class="doc"><div class="n">2</div><div class="t">Correction<div class="d">+ injection du vocabulaire · v3</div></div><div class="go">Copier</div></div>
+    <div class="doc"><div class="n">3</div><div class="t">Synthèse de cours<div class="d">v4</div></div><div class="go">Copier</div></div>
+    <div class="doc"><div class="n">4</div><div class="t">Recherche des sources<div class="d">v1</div></div><div class="go">Copier</div></div>
+    <div class="doc"><div class="n">5</div><div class="t">Fiche de révision<div class="d">v2</div></div><div class="go">Copier</div></div>
+    <div class="doc"><div class="n">6</div><div class="t">Prompt image GPT Image 2<div class="d">v3</div></div><div class="go">Copier</div></div>
+  </div>
+</div>
+
+</div>
+
+<!-- ===== VISIONNEUSE ===== -->
+<div class="lb" id="lb">
+  <div class="lbbar">
+    <div class="lbtitle"><b id="lbT">—</b><span class="m" id="lbM">—</span></div>
+    <div class="lbacts">
+      <button class="lbbtn" onclick="closeLb()">Fermer</button>
+      <button class="lbbtn dl">Télécharger</button>
+    </div>
+  </div>
+  <div class="lbstage">
+    <div class="lbfake"><div class="c" id="lbN">14</div><div class="s">Fiche de mémorisation</div></div>
+  </div>
+  <details class="lbprompt">
+    <summary>Voir le prompt qui a généré cette image</summary>
+    <pre>Une fiche de mémorisation au format A4 portrait, conçue comme une page d'un livre d'étude islamique contemporain : sobre, hiérarchisée, élégante, parfaitement lisible…
+
+Le fond principal est un crème chaud Nūr Cream #F9F4EF avec une très légère texture papier. Les titres et accents structurels sont en Mihrab Green #18352D…</pre>
+  </details>
+</div>
+
+<script>
+const CR={
+  home:[['Cours',null]],
+  module:[['Cours','home'],['Tawhid',null]],
+  list:[['Cours','home'],['Tawhid','module'],['Synthèses',null]],
+  images:[['Cours','home'],['Tawhid','module'],['Fiches images',null]],
+  read:[['Cours','home'],['Tawhid','module'],['Synthèses','list'],['Cours 14',null]],
+  pipeline:[['Cours','home'],['Tawhid','module'],['À terminer',null]],
+  vocab:[['Vocabulaire',null]],
+  prompts:[['Prompts',null]]
+};
+function go(v){
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+  document.getElementById('v-'+v).classList.add('on');
+  const c=document.getElementById('cr');c.innerHTML='';
+  CR[v].forEach((p,i)=>{
+    if(i)c.insertAdjacentHTML('beforeend','<span class="sep">›</span>');
+    c.insertAdjacentHTML('beforeend',p[1]?`<a onclick="go('${p[1]}')">${p[0]}</a>`:`<span class="now">${p[0]}</span>`);
+  });
+  document.querySelectorAll('.hd nav a').forEach(a=>a.classList.remove('on'));
+  document.querySelectorAll('.hd nav a')[v==='vocab'?1:v==='prompts'?2:0].classList.add('on');
+  window.scrollTo(0,0);
+}
+function lb(n,t,m){
+  document.getElementById('lbN').textContent=n;
+  document.getElementById('lbT').textContent=t;
+  document.getElementById('lbM').textContent='Tawhid · Cours '+n+' · '+m;
+  document.getElementById('lb').classList.add('on');
+  document.body.style.overflow='hidden';
+}
+function closeLb(){
+  document.getElementById('lb').classList.remove('on');
+  document.body.style.overflow='';
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeLb()});
+document.querySelectorAll('.tools').forEach(g=>{
+  g.querySelectorAll('.tool').forEach(t=>{
+    t.onclick=()=>{g.querySelectorAll('.tool').forEach(x=>x.classList.remove('on'));t.classList.add('on');};
+  });
+});
+go('home');
+</script>
+</body>
+</html>

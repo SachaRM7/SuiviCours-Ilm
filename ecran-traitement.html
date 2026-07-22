@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Traitement — Cours 15</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --green:#18352D; --green-soft:#24483E;
+  --cream:#F9F4EF; --cream-deep:#F1E9E0;
+  --gold:#AC8F65; --gold-pale:#D9C6A8;
+  --bordeaux:#6B2B36;
+  --ink:#2A2622; --ink-soft:#6E6459;
+  --r:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--cream);color:var(--ink);font-family:Inter,system-ui,sans-serif;font-size:15px;line-height:1.55;-webkit-font-smoothing:antialiased}
+.wrap{max-width:800px;margin:0 auto;padding:0 20px 90px}
+
+header{background:var(--green);color:var(--cream);padding:18px 0}
+.hd{max-width:800px;margin:0 auto;padding:0 20px;font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600}
+.crumb{background:var(--green)}
+.crumb-in{max-width:800px;margin:0 auto;padding:0 20px 14px;font-size:13px;color:var(--gold-pale);display:flex;gap:9px;flex-wrap:wrap}
+.crumb-in a{color:var(--gold-pale);text-decoration:none}
+.crumb-in .sep{opacity:.45}
+.crumb-in .now{color:var(--cream);font-weight:500}
+
+.top{padding:30px 0 24px}
+.h1{font-family:'Cormorant Garamond',serif;font-size:31px;font-weight:600;color:var(--green);line-height:1.15}
+.lede{font-size:13.5px;color:var(--ink-soft);margin-top:4px}
+
+/* rail de progression */
+.rail{display:flex;gap:3px;margin:20px 0 8px}
+.rail i{flex:1;height:6px;border-radius:3px;background:var(--cream-deep)}
+.rail i.done{background:var(--green)}
+.rail i.now{background:var(--bordeaux)}
+.railtxt{font-size:12.5px;color:var(--ink-soft);margin-bottom:28px}
+.railtxt b{color:var(--bordeaux);font-weight:500}
+
+/* étape */
+.step{background:#fff;border:1px solid var(--cream-deep);border-radius:var(--r);margin-bottom:12px;overflow:hidden}
+.step.now{border-color:var(--bordeaux);box-shadow:0 2px 14px rgba(107,43,54,.07)}
+.step.done{background:transparent;border-style:solid;border-color:var(--cream-deep)}
+
+.shead{display:flex;align-items:center;gap:14px;padding:16px 20px;cursor:pointer}
+.snum{
+  flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;
+  font-size:12.5px;font-weight:600;background:var(--cream-deep);color:var(--ink-soft);
+}
+.step.done .snum{background:var(--green);color:var(--cream)}
+.step.now .snum{background:var(--bordeaux);color:var(--cream)}
+.stitle{flex:1;min-width:0}
+.stitle h3{font-size:15.5px;font-weight:600;line-height:1.3}
+.stitle .d{font-size:12.5px;color:var(--ink-soft);margin-top:1px}
+.step.done .stitle h3{color:var(--ink-soft);font-weight:500}
+.sflag{flex:none;font-size:11.5px;color:var(--gold);letter-spacing:.04em}
+.step.done .sflag{color:var(--green)}
+.step.now .sflag{color:var(--bordeaux);font-weight:500}
+
+.sbody{display:none;padding:0 20px 20px 60px;border-top:1px solid var(--cream-deep);padding-top:18px;margin-top:-1px}
+.step.open .sbody{display:block}
+
+.dest{
+  display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--ink-soft);
+  background:var(--cream);border-radius:20px;padding:5px 12px;margin-bottom:14px;
+}
+.dest .dot{width:5px;height:5px;border-radius:50%;background:var(--gold)}
+
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.btn{
+  font-family:inherit;font-size:13.5px;padding:9px 17px;border-radius:20px;cursor:pointer;
+  border:1px solid var(--gold-pale);background:#fff;color:var(--ink);transition:.15s;
+}
+.btn:hover{border-color:var(--gold)}
+.btn.prim{background:var(--green);border-color:var(--green);color:var(--cream);font-weight:500}
+.btn.prim:hover{background:var(--green-soft);border-color:var(--green-soft)}
+.btn.done{background:var(--cream-deep);border-color:var(--cream-deep);color:var(--ink-soft)}
+
+.paste{
+  width:100%;min-height:110px;padding:13px 15px;border:1px dashed var(--gold-pale);border-radius:8px;
+  font-family:inherit;font-size:13.5px;background:var(--cream);color:var(--ink);resize:vertical;line-height:1.5;
+}
+.paste:focus{outline:none;border-color:var(--gold);border-style:solid;background:#fff}
+.paste::placeholder{color:var(--ink-soft)}
+.hint{font-size:12px;color:var(--ink-soft);margin-top:8px;line-height:1.5}
+.hint b{color:var(--ink);font-weight:500}
+
+/* récolte auto */
+.harvest{
+  margin-top:14px;background:var(--cream);border-left:2px solid var(--gold);border-radius:0 7px 7px 0;
+  padding:12px 15px;font-size:13px;
+}
+.harvest .t{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold);font-weight:600;margin-bottom:7px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{background:#fff;border:1px solid var(--gold-pale);border-radius:20px;padding:4px 11px;font-size:12.5px}
+.chip.new:after{content:' ·  nouveau';color:var(--gold);font-size:11px}
+
+/* étape déjà faite : résumé */
+.recap{font-size:13.5px;color:var(--ink-soft);display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.recap a{color:var(--green);text-decoration:none;border-bottom:1px solid var(--gold-pale);cursor:pointer}
+.recap a:hover{border-color:var(--gold)}
+
+/* verrou */
+.step.locked{opacity:.45}
+.step.locked .shead{cursor:default}
+
+.bar-fix{position:fixed;left:0;right:0;bottom:0;background:#fff;border-top:1px solid var(--cream-deep);padding:13px 20px;box-shadow:0 -4px 20px rgba(24,53,45,.06)}
+.bar-in{max-width:800px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.bar-in .st{font-size:13px;color:var(--ink-soft)}
+.bar-in .st b{color:var(--green)}
+
+@media(max-width:640px){
+  .sbody{padding-left:20px}
+  .acts{flex-direction:column}
+  .btn{width:100%}
+}
+</style>
+</head>
+<body>
+
+<header><div class="hd">Suivi cours de ʿilm</div></header>
+<div class="crumb"><div class="crumb-in">
+  <a>Cours</a><span class="sep">›</span><a>Tawhid</a><span class="sep">›</span><span class="now">Cours 15</span>
+</div></div>
+
+<div class="wrap">
+
+  <div class="top">
+    <div class="h1">Cours 15</div>
+    <div class="lede">Tawhid · Cheikh Hatim Al-Maliki · lundi 20 juillet 2026, 20h30</div>
+
+    <div class="rail">
+      <i class="done"></i><i class="done"></i><i class="now"></i><i></i><i></i><i></i>
+    </div>
+    <div class="railtxt">Deux étapes faites · prochaine : <b>la synthèse</b></div>
+  </div>
+
+  <!-- 1 -->
+  <div class="step done" data-s="1">
+    <div class="shead" onclick="tog(1)">
+      <div class="snum">✓</div>
+      <div class="stitle"><h3>Transcription</h3><div class="d">Notebook Gemini · 20 juil., 22h14</div></div>
+      <div class="sflag">Fait</div>
+    </div>
+    <div class="sbody">
+      <div class="recap">
+        <span>8 420 mots</span>
+        <a>Voir le texte</a>
+        <a>Relancer l'étape</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 -->
+  <div class="step done" data-s="2">
+    <div class="shead" onclick="tog(2)">
+      <div class="snum">✓</div>
+      <div class="stitle"><h3>Correction</h3><div class="d">31 corrections · 4 termes ajoutés au vocabulaire</div></div>
+      <div class="sflag">Fait</div>
+    </div>
+    <div class="sbody">
+      <div class="recap">
+        <a>Voir les corrections</a>
+        <a>Voir le texte corrigé</a>
+        <a>Relancer l'étape</a>
+      </div>
+      <div class="harvest">
+        <div class="t">Ajoutés au vocabulaire</div>
+        <div class="chips">
+          <span class="chip new">Tawakkul — توكل</span>
+          <span class="chip new">Qadar — قدر</span>
+          <span class="chip new">Kasb — كسب</span>
+          <span class="chip new">Jabriyya — جبرية</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3 — étape courante -->
+  <div class="step now open" data-s="3">
+    <div class="shead" onclick="tog(3)">
+      <div class="snum">3</div>
+      <div class="stitle"><h3>Synthèse</h3><div class="d">Structurer le cours en document lisible</div></div>
+      <div class="sflag">À faire</div>
+    </div>
+    <div class="sbody">
+      <div class="dest"><span class="dot"></span>À coller dans Claude</div>
+
+      <div class="acts">
+        <button class="btn prim">Copier le prompt + la transcription</button>
+        <button class="btn">Voir le prompt seul</button>
+      </div>
+
+      <textarea class="paste" placeholder="Colle ici la synthèse produite par Claude…"></textarea>
+      <div class="hint">
+        L'app récupère automatiquement le <b>titre du cours</b> et le <b>glossaire</b> depuis la synthèse. Tu pourras corriger le titre avant qu'il soit enregistré.
+      </div>
+
+      <div class="acts" style="margin-top:14px;margin-bottom:0">
+        <button class="btn prim">Enregistrer la synthèse</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 -->
+  <div class="step locked" data-s="4">
+    <div class="shead">
+      <div class="snum">4</div>
+      <div class="stitle"><h3>Sources</h3><div class="d">Identifier et trancher les références citées</div></div>
+      <div class="sflag">Après la synthèse</div>
+    </div>
+  </div>
+
+  <!-- 5 -->
+  <div class="step locked" data-s="5">
+    <div class="shead">
+      <div class="snum">5</div>
+      <div class="stitle"><h3>Fiche de révision</h3><div class="d">Condenser en une page mémorisable</div></div>
+      <div class="sflag">Après les sources</div>
+    </div>
+  </div>
+
+  <!-- 6 -->
+  <div class="step locked" data-s="6">
+    <div class="shead">
+      <div class="snum">6</div>
+      <div class="stitle"><h3>Fiche image</h3><div class="d">Générer le prompt, puis déposer l'image</div></div>
+      <div class="sflag">Après les sources</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="bar-fix"><div class="bar-in">
+  <div class="st">Cours 15 · <b>2 étapes sur 6</b></div>
+  <div style="display:flex;gap:9px">
+    <button class="btn">Voir le cours</button>
+  </div>
+</div></div>
+
+<script>
+function tog(n){
+  const el=document.querySelector(`.step[data-s="${n}"]`);
+  if(el.classList.contains('locked'))return;
+  el.classList.toggle('open');
+}
+</script>
+</body>
+</html>
