@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAsync } from "../hooks/useAsync";
 import {
   getCourseArtifactsByPath,
@@ -118,7 +118,24 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
+function pastePlaceholder(step: StepDefinition) {
+  if (step.key === "sources") {
+    return "Colle ici la réponse Claude de recherche des sources. L'app extraira les références, puis ouvrira l'écran de validation.";
+  }
+
+  if (step.resultArtifactType) {
+    return "Colle ici le résultat produit...";
+  }
+
+  return "Cette étape ne conserve pas d'artefact. Tu peux la marquer comme faite.";
+}
+
+function saveLabel(step: StepDefinition) {
+  return step.key === "sources" ? "Extraire les références" : "Enregistrer";
+}
+
 export function TreatmentPage() {
+  const navigate = useNavigate();
   const { courseId } = useParams();
   const [reloadKey, setReloadKey] = useState(0);
   const [busyStep, setBusyStep] = useState<StepKey | null>(null);
@@ -178,10 +195,11 @@ export function TreatmentPage() {
 
   async function harvestStepOutput(step: StepDefinition, output: string) {
     if (!data) {
-      return [];
+      return { messages: [], referencesCount: 0 };
     }
 
     const messages: string[] = [];
+    let referencesCount = 0;
 
     if (step.key === "correction") {
       const terms = parseNewTerms(output);
@@ -236,13 +254,14 @@ export function TreatmentPage() {
           courseId: data.course.id,
           references,
         });
+        referencesCount = references.length;
         messages.push(
           `${references.length} référence${references.length > 1 ? "s" : ""}`,
         );
       }
     }
 
-    return messages;
+    return { messages, referencesCount };
   }
 
   async function handleSaveResult(step: StepDefinition) {
@@ -276,10 +295,16 @@ export function TreatmentPage() {
       setResults((current) => ({ ...current, [step.key]: "" }));
       setReloadKey((key) => key + 1);
       setNotice(
-        harvested.length > 0
-          ? `${step.title} enregistrée · récupéré : ${harvested.join(", ")}.`
+        harvested.messages.length > 0
+          ? `${step.title} enregistrée · récupéré : ${harvested.messages.join(
+              ", ",
+            )}.`
           : `${step.title} enregistrée.`,
       );
+
+      if (step.key === "sources" && harvested.referencesCount > 0) {
+        navigate(`/cours/${data.course.id}/sources`);
+      }
     } finally {
       setBusyStep(null);
     }
@@ -467,23 +492,22 @@ export function TreatmentPage() {
                             [step.key]: event.target.value,
                           }))
                         }
-                        placeholder={
-                          step.resultArtifactType
-                            ? "Colle ici le résultat produit..."
-                            : "Aucun artefact n'est conservé pour cette étape. Tu peux laisser vide et marquer fait."
-                        }
+                        placeholder={pastePlaceholder(step)}
                         value={results[step.key]}
                       />
                       <button
                         className="button button--primary"
                         disabled={
                           busyStep === step.key ||
-                          Boolean(step.resultArtifactType && !results[step.key].trim())
+                          Boolean(
+                            (step.resultArtifactType || step.key === "sources") &&
+                              !results[step.key].trim(),
+                          )
                         }
                         onClick={() => handleSaveResult(step)}
                         type="button"
                       >
-                        {busyStep === step.key ? "Enregistrement..." : "Enregistrer"}
+                        {busyStep === step.key ? "Enregistrement..." : saveLabel(step)}
                       </button>
                     </div>
                   ) : null}
