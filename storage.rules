@@ -4,7 +4,7 @@ service firebase.storage {
   match /b/{bucket}/o {
     function isAllowedUser() {
       return request.auth != null
-        && request.auth.uid == "REPLACE_WITH_ALLOWED_UID";
+        && request.auth.uid == "YffF7VLfMoXrgo8TTZzlKGwHPIu1";
     }
 
     match /{path=**} {
