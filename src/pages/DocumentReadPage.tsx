@@ -135,7 +135,7 @@ export function DocumentReadPage() {
         </Link>
       </div>
 
-      {missingArtifacts.length > 0 ? (
+      {missingArtifacts.length > 0 || document.artifact.type === "prompt_image" ? (
         <div className="edit-actions">
           {missingArtifacts.map((link) => (
             <Link
@@ -146,17 +146,13 @@ export function DocumentReadPage() {
               Saisir {link.label.toLowerCase()}
             </Link>
           ))}
-          <Link className="tool" to={`/cours/${document.course.id}/images/new`}>
-            Ajouter une image
-          </Link>
+          {document.artifact.type === "prompt_image" ? (
+            <Link className="tool on" to={`/cours/${document.course.id}/images/new`}>
+              Déposer l'image générée
+            </Link>
+          ) : null}
         </div>
-      ) : (
-        <div className="edit-actions">
-          <Link className="tool" to={`/cours/${document.course.id}/images/new`}>
-            Ajouter une image
-          </Link>
-        </div>
-      )}
+      ) : null}
 
       <div className="markdown-body">
         <ReactMarkdown
