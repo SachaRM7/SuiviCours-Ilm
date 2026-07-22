@@ -10,6 +10,7 @@ import { ImageViewerPage } from "../pages/ImageViewerPage";
 import { ImageUploadPage } from "../pages/ImageUploadPage";
 import { ModulePage } from "../pages/ModulePage";
 import { NewCoursePage } from "../pages/NewCoursePage";
+import { TreatmentPage } from "../pages/TreatmentPage";
 
 export function App() {
   return (
@@ -26,6 +27,7 @@ export function App() {
         <Route index element={<HomePage />} />
         <Route path="modules/:moduleId" element={<ModulePage />} />
         <Route path="modules/:moduleId/:rayon" element={<DocumentListPage />} />
+        <Route path="cours/:courseId/traitement" element={<TreatmentPage />} />
         <Route path="cours/:courseId/:type" element={<DocumentReadPage />} />
         <Route path="cours/:courseId/:type/edit" element={<ArtifactEditorPage />} />
         <Route path="cours/:courseId/images/new" element={<ImageUploadPage />} />

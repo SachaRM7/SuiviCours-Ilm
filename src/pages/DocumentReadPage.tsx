@@ -130,6 +130,9 @@ export function DocumentReadPage() {
         >
           Modifier
         </Link>
+        <Link className="cx" to={`/cours/${document.course.id}/traitement`}>
+          Traitement
+        </Link>
       </div>
 
       {missingArtifacts.length > 0 ? (

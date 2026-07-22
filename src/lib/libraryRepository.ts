@@ -22,6 +22,7 @@ import type {
   LibraryDocument,
   LibraryImage,
   Professor,
+  StepKey,
 } from "../types/domain";
 
 export type ProfessorWithModules = Professor & {
@@ -397,6 +398,47 @@ export async function saveCourseImage(input: {
   );
 
   return imageId;
+}
+
+const downstreamSteps: Record<StepKey, StepKey[]> = {
+  transcription: ["correction", "synthese", "sources", "fiche", "image"],
+  correction: ["synthese", "sources", "fiche", "image"],
+  synthese: ["sources", "fiche", "image"],
+  sources: ["fiche", "image"],
+  fiche: [],
+  image: [],
+};
+
+export async function restartStep(input: {
+  professorId: string;
+  moduleId: string;
+  courseId: string;
+  step: StepKey;
+}) {
+  const now = new Date().toISOString();
+  const updates: Record<string, string | boolean | null> = {
+    [`etapes.${input.step}.fait`]: false,
+    [`etapes.${input.step}.date`]: null,
+    [`etapes.${input.step}.obsolete`]: false,
+    updatedAt: now,
+  };
+
+  for (const step of downstreamSteps[input.step]) {
+    updates[`etapes.${step}.obsolete`] = true;
+  }
+
+  await updateDoc(
+    doc(
+      db,
+      "professeurs",
+      input.professorId,
+      "modules",
+      input.moduleId,
+      "cours",
+      input.courseId,
+    ),
+    updates,
+  );
 }
 
 export async function listDocumentsForRayon(

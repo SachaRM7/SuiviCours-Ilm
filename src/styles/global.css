@@ -438,6 +438,151 @@ textarea {
   font-size: 12.5px;
 }
 
+.treatment-wrap {
+  max-width: 800px;
+}
+
+.rail {
+  display: flex;
+  gap: 3px;
+  margin-top: 20px;
+}
+
+.rail i {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--cream-deep);
+}
+
+.rail i.done {
+  background: var(--green);
+}
+
+.rail i.now {
+  background: var(--bordeaux);
+}
+
+.treatment-steps {
+  display: grid;
+  gap: 12px;
+}
+
+.treatment-step {
+  overflow: hidden;
+  border: 1px solid var(--cream-deep);
+  border-radius: var(--radius-card);
+  background: var(--white);
+}
+
+.treatment-step.now {
+  border-color: var(--bordeaux);
+  box-shadow: 0 2px 14px rgba(107, 43, 54, 0.07);
+}
+
+.treatment-step.done {
+  background: transparent;
+}
+
+.treatment-step.locked {
+  opacity: 0.45;
+}
+
+.treatment-step.obsolete {
+  border-color: var(--bordeaux);
+  border-style: dashed;
+}
+
+.step-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+}
+
+.step-head > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+
+.step-head strong {
+  display: block;
+  font-size: 15.5px;
+}
+
+.step-head small {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  margin-top: 1px;
+}
+
+.step-head b {
+  color: var(--gold);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.treatment-step.now .step-head b,
+.treatment-step.obsolete .step-head b {
+  color: var(--bordeaux);
+}
+
+.step-num {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--cream-deep);
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.treatment-step.done .step-num {
+  background: var(--green);
+  color: var(--cream);
+}
+
+.treatment-step.now .step-num {
+  background: var(--bordeaux);
+  color: var(--cream);
+}
+
+.step-body {
+  border-top: 1px solid var(--cream-deep);
+  padding: 18px 20px 20px 60px;
+}
+
+.step-body p {
+  color: var(--ink-soft);
+  margin: 0 0 14px;
+}
+
+.dest-pill {
+  display: inline-flex;
+  border-radius: var(--radius-pill);
+  background: var(--cream);
+  color: var(--ink-soft);
+  font-size: 12px;
+  margin-bottom: 12px;
+  padding: 5px 12px;
+}
+
+.step-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tool.danger {
+  color: var(--bordeaux);
+}
+
 .search {
   width: 100%;
   border: 1px solid var(--cream-deep);
