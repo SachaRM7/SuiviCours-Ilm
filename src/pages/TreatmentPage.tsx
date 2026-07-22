@@ -7,7 +7,16 @@ import {
   markStepDone,
   restartStep,
   saveArtifact,
+  saveDetectedReferences,
+  updateCourseTitle,
+  upsertVocabularyTerms,
 } from "../lib/libraryRepository";
+import {
+  parseGlossaryTerms,
+  parseNewTerms,
+  parseReferences,
+  parseShortTitle,
+} from "../lib/pipelineParsers";
 import { buildPromptPayload } from "../lib/promptRepository";
 import type {
   ArtifactType,
@@ -167,6 +176,75 @@ export function TreatmentPage() {
     setNotice(`Prompt ${step.title.toLowerCase()} copié.`);
   }
 
+  async function harvestStepOutput(step: StepDefinition, output: string) {
+    if (!data) {
+      return [];
+    }
+
+    const messages: string[] = [];
+
+    if (step.key === "correction") {
+      const terms = parseNewTerms(output);
+      if (terms.length > 0) {
+        await upsertVocabularyTerms({
+          professorId: data.professor.id,
+          moduleId: data.module.id,
+          moduleSlug: data.module.slug,
+          courseId: data.course.id,
+          courseNumero: data.course.numero,
+          courseDate: data.course.date,
+          terms,
+        });
+        messages.push(`${terms.length} terme${terms.length > 1 ? "s" : ""}`);
+      }
+    }
+
+    if (step.key === "synthese") {
+      const title = parseShortTitle(output);
+      const terms = parseGlossaryTerms(output);
+
+      if (title) {
+        await updateCourseTitle({
+          professorId: data.professor.id,
+          moduleId: data.module.id,
+          courseId: data.course.id,
+          titre: title,
+        });
+        messages.push("titre proposé");
+      }
+
+      if (terms.length > 0) {
+        await upsertVocabularyTerms({
+          professorId: data.professor.id,
+          moduleId: data.module.id,
+          moduleSlug: data.module.slug,
+          courseId: data.course.id,
+          courseNumero: data.course.numero,
+          courseDate: data.course.date,
+          terms,
+        });
+        messages.push(`${terms.length} terme${terms.length > 1 ? "s" : ""}`);
+      }
+    }
+
+    if (step.key === "sources") {
+      const references = parseReferences(output);
+      if (references.length > 0) {
+        await saveDetectedReferences({
+          professorId: data.professor.id,
+          moduleId: data.module.id,
+          courseId: data.course.id,
+          references,
+        });
+        messages.push(
+          `${references.length} référence${references.length > 1 ? "s" : ""}`,
+        );
+      }
+    }
+
+    return messages;
+  }
+
   async function handleSaveResult(step: StepDefinition) {
     if (!data) {
       return;
@@ -176,13 +254,14 @@ export function TreatmentPage() {
     setNotice(null);
 
     try {
+      const output = results[step.key];
       if (step.resultArtifactType) {
         await saveArtifact({
           professorId: data.professor.id,
           moduleId: data.module.id,
           courseId: data.course.id,
           type: step.resultArtifactType,
-          contenu: results[step.key],
+          contenu: output,
         });
       } else {
         await markStepDone({
@@ -193,9 +272,14 @@ export function TreatmentPage() {
         });
       }
 
+      const harvested = await harvestStepOutput(step, output);
       setResults((current) => ({ ...current, [step.key]: "" }));
       setReloadKey((key) => key + 1);
-      setNotice(`${step.title} enregistrée.`);
+      setNotice(
+        harvested.length > 0
+          ? `${step.title} enregistrée · récupéré : ${harvested.join(", ")}.`
+          : `${step.title} enregistrée.`,
+      );
     } finally {
       setBusyStep(null);
     }

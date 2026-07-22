@@ -24,6 +24,7 @@ import type {
   Professor,
   StepKey,
 } from "../types/domain";
+import type { ParsedReference, ParsedVocabularyTerm } from "./pipelineParsers";
 
 export type ProfessorWithModules = Professor & {
   modules: CourseModule[];
@@ -424,6 +425,118 @@ export async function markStepDone(input: {
       [`etapes.${input.step}.obsolete`]: false,
       updatedAt: now,
     },
+  );
+}
+
+export async function updateCourseTitle(input: {
+  professorId: string;
+  moduleId: string;
+  courseId: string;
+  titre: string;
+}) {
+  await updateDoc(
+    doc(
+      db,
+      "professeurs",
+      input.professorId,
+      "modules",
+      input.moduleId,
+      "cours",
+      input.courseId,
+    ),
+    {
+      titre: input.titre,
+      titreValide: false,
+      updatedAt: new Date().toISOString(),
+    },
+  );
+}
+
+export async function upsertVocabularyTerms(input: {
+  professorId: string;
+  moduleId: string;
+  moduleSlug: string;
+  courseId: string;
+  courseNumero: number;
+  courseDate: string;
+  terms: ParsedVocabularyTerm[];
+}) {
+  const now = new Date().toISOString();
+  const unique = new Map(input.terms.map((term) => [term.cle, term]));
+
+  await Promise.all(
+    [...unique.values()].map(async (term) => {
+      const vocabRef = doc(db, "vocabulaire", term.cle);
+      const existing = await getDoc(vocabRef);
+      const existingData = existing.data();
+      const tag = `#${input.moduleSlug}_C${input.courseNumero}`;
+      const occurrence = {
+        professeurId: input.professorId,
+        moduleId: input.moduleId,
+        coursId: input.courseId,
+        coursNumero: input.courseNumero,
+      };
+      const existingOccurrences = (existingData?.occurrences ?? []) as Array<{
+        coursId?: string;
+      }>;
+      const occurrences = existingOccurrences.some(
+        (item) => item.coursId === input.courseId,
+      )
+        ? existingOccurrences
+        : [...existingOccurrences, occurrence];
+      const tags = Array.from(new Set([...(existingData?.tags ?? []), tag]));
+
+      await setDoc(
+        vocabRef,
+        {
+          cle: term.cle,
+          translitteration: existingData?.translitteration ?? term.translitteration,
+          arabe: existingData?.arabe ?? term.arabe,
+          glose: existingData?.glose ?? term.glose,
+          tags,
+          occurrences,
+          premiereApparition:
+            existingData?.premiereApparition ?? {
+              coursId: input.courseId,
+              date: input.courseDate,
+            },
+          createdAt: existingData?.createdAt ?? now,
+          updatedAt: now,
+        },
+        { merge: true },
+      );
+    }),
+  );
+}
+
+export async function saveDetectedReferences(input: {
+  professorId: string;
+  moduleId: string;
+  courseId: string;
+  references: ParsedReference[];
+}) {
+  await Promise.all(
+    input.references.map((reference, index) =>
+      setDoc(
+        doc(
+          db,
+          "professeurs",
+          input.professorId,
+          "modules",
+          input.moduleId,
+          "cours",
+          input.courseId,
+          "references",
+          `ref-${String(index + 1).padStart(2, "0")}`,
+        ),
+        {
+          ...reference,
+          choixTexte: reference.statutAuto === "paraphrase" ? null : "cours",
+          choixSource: null,
+          valide: false,
+        },
+      ),
+    ),
   );
 }
 

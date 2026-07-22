@@ -1,7 +1,6 @@
 import {
   collection,
   getDocs,
-  orderBy,
   query,
   where,
   type DocumentData,
@@ -37,11 +36,14 @@ export async function getActivePrompt(
       collection(db, "prompts"),
       where("etape", "==", etape),
       where("actif", "==", true),
-      orderBy("version", "desc"),
     ),
   );
 
-  return snapshot.docs[0] ? promptFromDoc(snapshot.docs[0]) : null;
+  return (
+    snapshot.docs
+      .map(promptFromDoc)
+      .sort((left, right) => right.version - left.version)[0] ?? null
+  );
 }
 
 async function getVocabularyForModule(moduleId: string) {
