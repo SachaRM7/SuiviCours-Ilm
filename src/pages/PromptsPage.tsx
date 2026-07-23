@@ -52,12 +52,13 @@ export function PromptsPage() {
       prompts.find((prompt) => prompt.id === selectedId) ?? prompts[0] ?? null,
     [prompts, selectedId],
   );
+  const usesExternalTool = selected?.etape === "transcription";
   const dirty =
     Boolean(selected) &&
     (title !== selected?.titre ||
       template !== selected?.template ||
       active !== selected?.actif ||
-      aiProvider !== (selected?.aiProvider ?? "openai") ||
+      aiProvider !== (selected?.aiProvider ?? undefined) ||
       aiModel !== (selected?.aiModel ?? ""));
 
   useEffect(() => {
@@ -69,7 +70,7 @@ export function PromptsPage() {
     setTitle(selected.titre);
     setTemplate(selected.template);
     setActive(selected.actif);
-    setAiProvider(selected.aiProvider ?? "openai");
+    setAiProvider(selected.aiProvider ?? undefined);
     setAiModel(selected.aiModel ?? "");
   }, [selected]);
 
@@ -123,8 +124,8 @@ export function PromptsPage() {
         titre: title.trim() || selected.titre,
         template,
         actif: active,
-        aiProvider,
-        aiModel: aiModel.trim(),
+        aiProvider: selected.etape === "transcription" ? undefined : aiProvider,
+        aiModel: selected.etape === "transcription" ? "" : aiModel.trim(),
       });
       setReloadKey((key) => key + 1);
       setNotice("Prompt enregistré.");
@@ -197,32 +198,44 @@ export function PromptsPage() {
               </label>
             </div>
 
-            <div className="prompt-model-grid">
-              <label className="field">
-                <span>Provider IA</span>
-                <select
-                  onChange={(event) =>
-                    setAiProvider(event.target.value as PromptTemplate["aiProvider"])
-                  }
-                  value={aiProvider}
-                >
-                  <option value="openai">OpenAI</option>
-                  <option value="anthropic">Anthropic</option>
-                </select>
-              </label>
-              <label className="field">
-                <span>Modèle recommandé</span>
-                <input
-                  onChange={(event) => setAiModel(event.target.value)}
-                  placeholder={
-                    aiProvider === "anthropic"
-                      ? "claude-sonnet-5-20260715"
-                      : "gpt-5.6-luna"
-                  }
-                  value={aiModel}
-                />
-              </label>
-            </div>
+            {usesExternalTool ? (
+              <div className="prompt-tool-note">
+                <strong>Notebook Gemini</strong>
+                <span>
+                  Cette étape reste manuelle : aucun modèle API n'est appelé par
+                  l'app.
+                </span>
+              </div>
+            ) : (
+              <div className="prompt-model-grid">
+                <label className="field">
+                  <span>Provider IA</span>
+                  <select
+                    onChange={(event) =>
+                      setAiProvider(
+                        event.target.value as PromptTemplate["aiProvider"],
+                      )
+                    }
+                    value={aiProvider ?? "openai"}
+                  >
+                    <option value="openai">OpenAI</option>
+                    <option value="anthropic">Anthropic</option>
+                  </select>
+                </label>
+                <label className="field">
+                  <span>Modèle recommandé</span>
+                  <input
+                    onChange={(event) => setAiModel(event.target.value)}
+                    placeholder={
+                      aiProvider === "anthropic"
+                        ? "claude-sonnet-5-20260715"
+                        : "gpt-5.6-luna"
+                    }
+                    value={aiModel}
+                  />
+                </label>
+              </div>
+            )}
 
             <label className="editor-pane">
               <span>Template</span>

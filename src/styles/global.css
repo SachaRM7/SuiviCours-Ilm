@@ -1697,6 +1697,27 @@ summary {
   margin-top: 0;
 }
 
+.prompt-tool-note {
+  display: grid;
+  gap: 3px;
+  border: 1px dashed var(--gold-pale);
+  border-radius: 8px;
+  background: var(--cream);
+  color: var(--ink-soft);
+  padding: 12px 14px;
+}
+
+.prompt-tool-note strong {
+  color: var(--green);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.prompt-tool-note span {
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
 .prompt-editor__top .field {
   margin-top: 0;
 }
