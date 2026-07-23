@@ -73,6 +73,8 @@ export type ReferenceStatus =
   | "allusion"
   | "introuvable";
 
+export type ReferenceTextChoice = "cours" | "exact" | "personnalise";
+
 export type CourseReference = {
   id: string;
   type: string;
@@ -81,9 +83,11 @@ export type CourseReference = {
   texteArabe: string;
   sourceIdentifiee: string;
   statutAuto: ReferenceStatus;
-  choixTexte: "cours" | "exact" | "personnalise" | null;
+  choixTexte: ReferenceTextChoice | null;
   textePersonnalise: string;
   choixSource: string | null;
+  recommandationTexte: ReferenceTextChoice | null;
+  recommandationSource: string | null;
   valide: boolean;
 };
 

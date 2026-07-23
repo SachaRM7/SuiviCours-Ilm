@@ -127,6 +127,17 @@ MÉTHODE
    - INTROUVABLE — aucune correspondance, ou attribution circulant sans chaîne de transmission.
 4. Dans la colonne Type, utilise un libellé libre et précis. Ne force jamais une référence non islamique en hadith. Exemples : Hadith, Verset, Parole rapportée, Parole de savant, Sīra, Citation philosophique, Référence philosophique, Référence historique, Attribution d'ouvrage, Concept.
 5. Pour tout texte arabe identifié, donne le texte arabe complet avec tashkil, et le degré d'authenticité si les recueils le précisent. Pour les références non arabes, laisse la colonne arabe vide avec « — ».
+6. Propose deux recommandations prudentes pour aider la validation humaine :
+   - Choix texte recommandé : `texte exact`, `phrase du cours` ou `personnalisé`.
+   - Choix source recommandé : la source à imprimer, `Allusion à [source]`, ou `ne pas inclure`.
+
+RÈGLES DE RECOMMANDATION
+- EXACTE : recommande généralement `texte exact` + la source identifiée.
+- PARAPHRASE : recommande `texte exact` si le texte-source est sûr et lisible ; recommande `phrase du cours` si la formulation du cours est pédagogique et ne prétend pas citer mot pour mot.
+- ALLUSION : recommande généralement `phrase du cours` + `Allusion à [source]`, sauf si la source exacte imprimée est plus claire.
+- INTROUVABLE : recommande `phrase du cours` ou `personnalisé`, et recommande `ne pas inclure` pour la source.
+- Ne recommande jamais un texte exact absent ou fragile.
+- Ne recommande jamais d'imprimer une source douteuse comme si elle était certaine.
 
 RÈGLE ABSOLUE
 N'invente jamais une référence. Un statut INTROUVABLE est un résultat valable et utile. Une source fabriquée est une faute grave.
@@ -134,8 +145,8 @@ N'invente jamais une référence. Un statut INTROUVABLE est un résultat valable
 SORTIE
 Un tableau, rien d'autre :
 
-| # | Type | Texte tel que dit en cours | Texte exact de la référence | Texte arabe | Source identifiée | Statut |
-|---|---|---|---|---|---|---|
+| # | Type | Texte tel que dit en cours | Texte exact de la référence | Texte arabe | Source identifiée | Statut | Choix texte recommandé | Choix source recommandé |
+|---|---|---|---|---|---|---|---|---|
 
 Puis, sous le tableau, pour chaque référence PARAPHRASE, ALLUSION ou INTROUVABLE, un court paragraphe factuel expliquant l'écart constaté — sans jugement sur l'enseignement.
 ```

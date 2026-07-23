@@ -93,6 +93,36 @@ function referenceTypeLabel(type: string) {
   return legacyLabels[type] ?? (type.trim() || "Reference");
 }
 
+function normalizeOption(value: string | null) {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function isRecommendedSource(reference: CourseReference, source: string | null) {
+  if (!reference.recommandationSource) {
+    return false;
+  }
+
+  if (source === null) {
+    return normalizeOption(reference.recommandationSource) === "ne pas inclure";
+  }
+
+  return normalizeOption(reference.recommandationSource) === normalizeOption(source);
+}
+
+function optionLabel(label: string, recommended: boolean) {
+  return (
+    <>
+      <span>{label}</span>
+      {recommended ? <em className="recommended-tag">Recommande</em> : null}
+    </>
+  );
+}
+
 export function SourceValidationPage() {
   const navigate = useNavigate();
   const { courseId } = useParams();
@@ -289,7 +319,10 @@ export function SourceValidationPage() {
                     }
                     type="button"
                   >
-                    Texte exact
+                    {optionLabel(
+                      "Texte exact",
+                      reference.recommandationTexte === "exact",
+                    )}
                   </button>
                 ) : null}
                 {reference.texteCours ? (
@@ -302,7 +335,10 @@ export function SourceValidationPage() {
                     }
                     type="button"
                   >
-                    Phrase du cours
+                    {optionLabel(
+                      "Phrase du cours",
+                      reference.recommandationTexte === "cours",
+                    )}
                   </button>
                 ) : null}
                 <button
@@ -314,7 +350,10 @@ export function SourceValidationPage() {
                   }
                   type="button"
                 >
-                  Personnalise
+                  {optionLabel(
+                    "Personnalise",
+                    reference.recommandationTexte === "personnalise",
+                  )}
                 </button>
               </div>
               {decision.choixTexte === "personnalise" ? (
@@ -343,7 +382,7 @@ export function SourceValidationPage() {
                     }
                     type="button"
                   >
-                    {source}
+                    {optionLabel(source, isRecommendedSource(reference, source))}
                   </button>
                 ))}
                 <button
@@ -351,7 +390,10 @@ export function SourceValidationPage() {
                   onClick={() => updateDraft(reference.id, { choixSource: null })}
                   type="button"
                 >
-                  Ne pas inclure
+                  {optionLabel(
+                    "Ne pas inclure",
+                    isRecommendedSource(reference, null),
+                  )}
                 </button>
               </div>
               <input

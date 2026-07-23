@@ -1,4 +1,9 @@
-import type { CourseReference, ReferenceStatus, VocabularyEntry } from "../types/domain";
+import type {
+  CourseReference,
+  ReferenceStatus,
+  ReferenceTextChoice,
+  VocabularyEntry,
+} from "../types/domain";
 
 export type ParsedVocabularyTerm = Pick<
   VocabularyEntry,
@@ -51,7 +56,9 @@ function parseMarkdownTable(markdown: string, expectedColumns: number) {
 
 function looksLikeHeader(row: string[]) {
   return row.some((cell) =>
-    /^(#|type|texte|source|statut|terme|graphie|glose)$/i.test(cell.trim()),
+    /^(#|type|texte|source|statut|terme|graphie|glose|choix)$/i.test(
+      cell.trim(),
+    ),
   );
 }
 
@@ -84,8 +91,9 @@ export function parseShortTitle(markdown: string) {
 
 export function parseGlossaryTerms(markdown: string): ParsedVocabularyTerm[] {
   const section =
-    markdown.match(/(?:^|\n)#{1,3}\s*Points de définition\s*\n([\s\S]*?)(?:\n#{1,3}\s|\nTITRE_COURT:|$)/i)?.[1] ??
-    "";
+    markdown.match(
+      /(?:^|\n)#{1,3}\s*Points de définition\s*\n([\s\S]*?)(?:\n#{1,3}\s|\nTITRE_COURT:|$)/i,
+    )?.[1] ?? "";
 
   return parseMarkdownTable(section, 3)
     .filter((row) => !looksLikeHeader(row))
@@ -124,6 +132,56 @@ function cleanReferenceType(value: string) {
   return value.trim() || "Référence";
 }
 
+function normalizeRecommendedText(value: string): ReferenceTextChoice | null {
+  const normalized = value
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
+
+  if (normalized.includes("exact")) {
+    return "exact";
+  }
+
+  if (
+    normalized.includes("cours") ||
+    normalized.includes("phrase") ||
+    normalized.includes("formulation")
+  ) {
+    return "cours";
+  }
+
+  if (normalized.includes("personnalis") || normalized.includes("saisie")) {
+    return "personnalise";
+  }
+
+  return null;
+}
+
+function normalizeRecommendedSource(value: string) {
+  const trimmed = value.trim();
+  const normalized = trimmed
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
+
+  if (
+    !trimmed ||
+    trimmed === "—"
+  ) {
+    return null;
+  }
+
+  if (
+    normalized.includes("ne pas inclure") ||
+    normalized.includes("aucune") ||
+    normalized.includes("omettre")
+  ) {
+    return "ne pas inclure";
+  }
+
+  return trimmed;
+}
+
 export function parseReferences(markdown: string): ParsedReference[] {
   return parseMarkdownTable(markdown, 7)
     .filter((row) => !looksLikeHeader(row))
@@ -134,6 +192,8 @@ export function parseReferences(markdown: string): ParsedReference[] {
       texteArabe: row[4] ?? "",
       sourceIdentifiee: row[5] ?? "",
       statutAuto: normalizeStatus(row[6] ?? ""),
+      recommandationTexte: normalizeRecommendedText(row[7] ?? ""),
+      recommandationSource: normalizeRecommendedSource(row[8] ?? ""),
     }))
     .filter((reference) => reference.texteCours || reference.texteExact);
 }

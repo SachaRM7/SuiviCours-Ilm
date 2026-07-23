@@ -148,6 +148,8 @@ function referenceFromDoc(doc: QueryDocumentSnapshot<DocumentData>): CourseRefer
     choixTexte: data.choixTexte ?? null,
     textePersonnalise: data.textePersonnalise ?? "",
     choixSource: data.choixSource ?? null,
+    recommandationTexte: data.recommandationTexte ?? null,
+    recommandationSource: data.recommandationSource ?? null,
     valide: data.valide ?? false,
   };
 }
@@ -723,6 +725,8 @@ export async function saveDetectedReferences(input: {
           choixTexte: null,
           textePersonnalise: "",
           choixSource: null,
+          recommandationTexte: reference.recommandationTexte ?? null,
+          recommandationSource: reference.recommandationSource ?? null,
           valide: false,
         },
       ),

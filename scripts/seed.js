@@ -43,7 +43,7 @@ function parsePrompts(markdown) {
     },
     4: {
       etape: "sources",
-      version: 1,
+      version: 3,
       aiProvider: "anthropic",
       aiModel: "claude-sonnet-5-20260715",
     },
@@ -61,7 +61,7 @@ function parsePrompts(markdown) {
     },
   };
   const prompts = [];
-  const pattern = /## Prompt (\d+) — ([^\n]+)[\s\S]*?```([\s\S]*?)```/g;
+  const pattern = /^## Prompt (\d+) .+? ([^\n]+)\n[\s\S]*?```([\s\S]*?)```/gm;
 
   for (const match of markdown.matchAll(pattern)) {
     const number = Number(match[1]);

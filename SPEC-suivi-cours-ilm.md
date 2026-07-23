@@ -101,6 +101,8 @@ Résultat de l'étape sources, après arbitrage utilisateur.
   choixTexte: "cours" | "exact" | "personnalise",
   textePersonnalise: "...",    // utilise seulement si choixTexte = "personnalise"
   choixSource: "Al-Tirmidhī n°2398" | null,   // null = ne pas inclure
+  recommandationTexte: "cours" | "exact" | "personnalise" | null,
+  recommandationSource: "Al-Tirmidhī n°2398" | "ne pas inclure" | null,
   valide: true
 }
 ```
