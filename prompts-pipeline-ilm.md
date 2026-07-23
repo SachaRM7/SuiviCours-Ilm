@@ -197,11 +197,11 @@ Français, markdown dense et aéré, tenue sur une page. Commence directement pa
 ---
 
 ## Prompt 6 — Générateur de prompt image
-**Entrée :** synthèse + sources validées · **Sortie :** prompt pour GPT Image 2
+**Entrée :** fiche de révision + sources validées · **Sortie :** prompt pour GPT Image 2
 
 ```
 TA MISSION
-Tu reçois la synthèse d'un cours de sciences islamiques et ses sources validées. Tu ne rédiges PAS une fiche : tu produis un PROMPT DE GÉNÉRATION D'IMAGE, complet et prêt à coller dans GPT Image 2, qui donnera une fiche de mémorisation A4 identique en style à la charte ci-dessous. Ta seule liberté est le CONTENU. Le STYLE est figé : tu le reproduis mot pour mot.
+Tu reçois la fiche de révision d'un cours de sciences islamiques et ses sources validées. Tu ne rédiges PAS une nouvelle fiche de révision : tu produis un PROMPT DE GÉNÉRATION D'IMAGE, complet et prêt à coller dans GPT Image 2, qui transformera cette fiche en fiche de mémorisation A4 identique en style à la charte ci-dessous. Ta seule liberté est l'adaptation visuelle du CONTENU déjà sélectionné dans la fiche. Le STYLE est figé : tu le reproduis mot pour mot.
 
 SOURCES VALIDÉES
 {{sources_validees}}
@@ -217,9 +217,9 @@ Pour le texte arabe : utilise celui fourni dans les sources validées. Si aucun 
 
 RÈGLES D'EXTRACTION
 1. Titre & numéro de cours. Repère le numéro et le sous-thème.
-2. Thèse. Une à trois phrases, au plus près de la synthèse.
+2. Thèse. Une à trois phrases, au plus près de la fiche de révision.
 3. Ancrages (3 ou 4). Les piliers qui structurent le cours. Pour chacun : un titre court, un sous-titre italique évocateur, et un contenu narratif ou en tableau. Privilégie le tableau dès qu'il y a une séquence ou une comparaison.
-4. Verbatim à mémoriser. 3 formules-chocs, mot pour mot depuis la synthèse. Jamais inventées.
+4. Verbatim à mémoriser. 3 formules-chocs, mot pour mot depuis la fiche de révision. Jamais inventées.
 5. Hadith ou verset fondateur. Le texte arabe avec tashkil, la traduction française, la source depuis les sources validées.
 6. Exercice. L'exercice pratique proposé dans le cours.
 7. Pied de page. Une citation courte qui résume le cours.

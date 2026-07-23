@@ -55,7 +55,7 @@ function parsePrompts(markdown) {
     },
     6: {
       etape: "prompt_image",
-      version: 3,
+      version: 4,
       aiProvider: "openai",
       aiModel: "gpt-5.6-luna",
     },

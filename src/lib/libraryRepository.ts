@@ -816,7 +816,7 @@ const downstreamSteps: Record<StepKey, StepKey[]> = {
   correction: ["synthese", "sources", "fiche", "image"],
   synthese: ["sources", "fiche", "image"],
   sources: ["fiche", "image"],
-  fiche: [],
+  fiche: ["image"],
   image: [],
 };
 
