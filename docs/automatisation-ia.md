@@ -6,9 +6,9 @@ Les clés API ne doivent jamais être placées dans `.env` Vite ni dans le navig
 ## Secrets à poser
 
 ```bash
-firebase functions:secrets:set OPENAI_API_KEY
-firebase functions:secrets:set ANTHROPIC_API_KEY
-firebase functions:secrets:set ALLOWED_UID
+npx firebase-tools functions:secrets:set OPENAI_API_KEY
+npx firebase-tools functions:secrets:set ANTHROPIC_API_KEY
+npx firebase-tools functions:secrets:set ALLOWED_UID
 ```
 
 `ALLOWED_UID` doit contenir l'UID Firebase Auth autorisé.
@@ -17,7 +17,7 @@ firebase functions:secrets:set ALLOWED_UID
 
 ```bash
 npm run functions:install
-firebase deploy --only functions
+npx firebase-tools deploy --only functions
 ```
 
 Le front utilise la région `europe-west1`, identique à celle de la fonction.
