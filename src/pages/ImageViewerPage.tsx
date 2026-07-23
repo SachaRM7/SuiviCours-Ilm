@@ -272,7 +272,12 @@ export function ImageViewerPage() {
           ‹
         </button>
         {hasRealImage ? (
-          <img alt="" src={data.image.url} />
+          <img
+            alt={`Fiche image du cours ${data.course.numero} - ${
+              data.course.titre || data.module.nom
+            }`}
+            src={data.image.url}
+          />
         ) : (
           <div className="viewer-fake">
             <strong>{data.course.numero}</strong>

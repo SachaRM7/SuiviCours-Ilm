@@ -222,7 +222,13 @@ export function DocumentListPage() {
               to={`/images/${course.id}/${image.id}`}
             >
               {image.url ? (
-                <img alt="" src={image.url} />
+                <img
+                  alt={`Fiche image du cours ${course.numero} - ${
+                    course.titre || config.title
+                  }`}
+                  loading="lazy"
+                  src={image.url}
+                />
               ) : (
                 <span className="thumb__fake">
                   <strong>{course.numero}</strong>

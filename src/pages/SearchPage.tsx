@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAsync } from "../hooks/useAsync";
 import {
   getCourseArtifactsByPath,
@@ -103,9 +103,33 @@ async function loadSearchIndex() {
 }
 
 export function SearchPage() {
-  const [query, setQuery] = useState("");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlQuery = searchParams.get("q") ?? "";
+  const [query, setQuery] = useState(urlQuery);
   const load = useCallback(() => loadSearchIndex(), []);
   const { data, error, loading } = useAsync(load);
+
+  useEffect(() => {
+    setQuery((current) => (current === urlQuery ? current : urlQuery));
+  }, [urlQuery]);
+
+  useEffect(() => {
+    if (query === urlQuery) {
+      return;
+    }
+
+    const nextParams = new URLSearchParams(searchParams);
+    const cleanQuery = query.trim();
+
+    if (cleanQuery) {
+      nextParams.set("q", cleanQuery);
+    } else {
+      nextParams.delete("q");
+    }
+
+    setSearchParams(nextParams, { replace: true });
+  }, [query, searchParams, setSearchParams, urlQuery]);
+
   const results = useMemo(() => {
     const needle = normalize(query);
 
@@ -127,14 +151,14 @@ export function SearchPage() {
       </div>
 
       <input
-        autoFocus
+        aria-label="Chercher dans tous les contenus"
         className="search search--large"
         onChange={(event) => setQuery(event.target.value)}
-        placeholder="Chercher un titre, une notion, une source..."
+        placeholder="Chercher un titre, une notion, une source…"
         value={query}
       />
 
-      {loading ? <div className="empty-state">Indexation locale...</div> : null}
+      {loading ? <div className="empty-state">Indexation locale…</div> : null}
 
       {error ? (
         <div className="empty-state empty-state--alert">
