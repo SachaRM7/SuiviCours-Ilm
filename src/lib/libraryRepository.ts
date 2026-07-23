@@ -555,6 +555,31 @@ export async function saveCourseImageVerification(input: {
   );
 }
 
+export async function updateCourseImagePrompt(input: {
+  professorId: string;
+  moduleId: string;
+  courseId: string;
+  imageId: string;
+  promptUtilise: string;
+}) {
+  await updateDoc(
+    doc(
+      db,
+      "professeurs",
+      input.professorId,
+      "modules",
+      input.moduleId,
+      "cours",
+      input.courseId,
+      "images",
+      input.imageId,
+    ),
+    {
+      promptUtilise: input.promptUtilise,
+    },
+  );
+}
+
 export async function markStepDone(input: {
   professorId: string;
   moduleId: string;

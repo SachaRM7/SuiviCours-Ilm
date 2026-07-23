@@ -1394,7 +1394,10 @@ summary {
 .viewer-button {
   border: 1px solid rgba(217, 198, 168, 0.4);
   border-radius: var(--radius-pill);
+  background: transparent;
   color: var(--gold-pale);
+  cursor: pointer;
+  font-family: inherit;
   font-size: 13px;
   padding: 7px 15px;
 }
@@ -1613,6 +1616,31 @@ summary {
   line-height: 1.5;
   padding: 14px;
   white-space: pre-wrap;
+}
+
+.viewer-prompt-edit {
+  display: grid;
+  gap: 10px;
+}
+
+.viewer-prompt-edit textarea {
+  width: 100%;
+  min-height: 180px;
+  border: 1px solid rgba(217, 198, 168, 0.32);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.25);
+  color: rgba(249, 244, 239, 0.78);
+  font-family: ui-monospace, monospace;
+  font-size: 11.5px;
+  line-height: 1.5;
+  padding: 14px;
+  resize: vertical;
+}
+
+.viewer-prompt-edit div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .vocab-list {

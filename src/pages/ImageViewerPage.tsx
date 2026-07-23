@@ -7,6 +7,7 @@ import {
   listCourseReferences,
   listImagesForModule,
   saveCourseImageVerification,
+  updateCourseImagePrompt,
 } from "../lib/libraryRepository";
 import type { CourseImage, LibraryImage } from "../types/domain";
 
@@ -60,6 +61,9 @@ export function ImageViewerPage() {
   const [verdict, setVerdict] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [editingPrompt, setEditingPrompt] = useState(false);
+  const [promptDraft, setPromptDraft] = useState("");
+  const [savedPrompt, setSavedPrompt] = useState<string | null>(null);
   const [savedVerification, setSavedVerification] = useState<
     CourseImage["verification"] | null
   >(null);
@@ -109,6 +113,7 @@ export function ImageViewerPage() {
         .join("\n"),
     [data?.references],
   );
+  const promptUtilise = savedPrompt ?? data?.image.promptUtilise ?? "";
 
   const imageNavigation = useMemo(() => {
     if (!data) {
@@ -177,11 +182,69 @@ export function ImageViewerPage() {
     await navigator.clipboard.writeText(
       buildVerificationPrompt({
         synthese,
-        promptUtilise: data.image.promptUtilise,
+        promptUtilise,
         sourcesValidees,
       }),
     );
     setNotice("Prompt de vérification copié.");
+  }
+
+  async function saveImagePrompt() {
+    if (!data) {
+      return;
+    }
+
+    setSaving(true);
+    setNotice(null);
+
+    try {
+      await updateCourseImagePrompt({
+        professorId: data.professor.id,
+        moduleId: data.module.id,
+        courseId: data.course.id,
+        imageId: data.image.id,
+        promptUtilise: promptDraft.trim(),
+      });
+      setSavedPrompt(promptDraft.trim());
+      setEditingPrompt(false);
+      setNotice("Prompt utilise enregistre.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function downloadImage() {
+    if (!data?.image.url) {
+      return;
+    }
+
+    setNotice(null);
+
+    try {
+      const response = await fetch(data.image.url);
+      if (!response.ok) {
+        throw new Error("download failed");
+      }
+
+      const blob = await response.blob();
+      const extension = blob.type.split("/")[1]?.replace("jpeg", "jpg") || "png";
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `${data.module.slug}-cours-${String(data.course.numero).padStart(
+        2,
+        "0",
+      )}-fiche-image.${extension}`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+      setNotice("Telechargement lance.");
+    } catch {
+      setNotice(
+        "Telechargement bloque par le navigateur. Ouvre l'image puis utilise Partager ou Enregistrer l'image.",
+      );
+    }
   }
 
   async function saveVerification() {
@@ -249,9 +312,13 @@ export function ImageViewerPage() {
             {hasRealImage ? "Ajouter une version" : "Déposer l'image"}
           </Link>
           {hasRealImage ? (
-            <a className="viewer-button" href={data.image.url}>
+            <button
+              className="viewer-button"
+              onClick={() => void downloadImage()}
+              type="button"
+            >
               Télécharger
-            </a>
+            </button>
           ) : null}
         </div>
       </div>
@@ -417,7 +484,45 @@ export function ImageViewerPage() {
 
       <details className="viewer-prompt">
         <summary>Voir le prompt qui a généré cette image</summary>
-        <pre>{data.image.promptUtilise}</pre>
+        {editingPrompt ? (
+          <div className="viewer-prompt-edit">
+            <textarea
+              onChange={(event) => setPromptDraft(event.target.value)}
+              value={promptDraft}
+            />
+            <div>
+              <button
+                className="viewer-button viewer-button--primary"
+                disabled={saving}
+                onClick={saveImagePrompt}
+                type="button"
+              >
+                {saving ? "Enregistrement..." : "Enregistrer"}
+              </button>
+              <button
+                className="viewer-button"
+                onClick={() => setEditingPrompt(false)}
+                type="button"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        ) : (
+          <>
+            <pre>{promptUtilise || "Aucun prompt utilise enregistre."}</pre>
+            <button
+              className="viewer-button"
+              onClick={() => {
+                setPromptDraft(promptUtilise);
+                setEditingPrompt(true);
+              }}
+              type="button"
+            >
+              Modifier le prompt utilise
+            </button>
+          </>
+        )}
       </details>
     </section>
   );
