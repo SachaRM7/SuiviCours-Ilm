@@ -14,10 +14,19 @@ import {
 import type { CourseImage, LibraryImage } from "../types/domain";
 
 function parseDefects(value: string) {
-  return value
+  const withoutCorrectionPrompt = value.split(/PROMPT DE CORRECTION IMAGE/i)[0];
+  const defectsBlock = withoutCorrectionPrompt.split(/D[ÉE]FAUTS/i).at(-1) ?? "";
+
+  return defectsBlock
     .split(/\r?\n/)
     .map((line) => line.replace(/^[-*]\s*/, "").trim())
-    .filter(Boolean);
+    .filter(
+      (line) =>
+        line &&
+        !/^NON CONFORME$/i.test(line) &&
+        !/^CONFORME$/i.test(line) &&
+        !/^ou$/i.test(line),
+    );
 }
 
 function buildVerificationPrompt(input: {
@@ -43,8 +52,16 @@ CONFORME
 ou
 
 NON CONFORME
+DÉFAUTS
 - défaut 1
 - défaut 2
+
+PROMPT DE CORRECTION IMAGE
+Corrige l'image fournie en gardant strictement la même composition, le même format A4 portrait, les mêmes couleurs, les mêmes polices, les mêmes ornements et la même hiérarchie visuelle. Ne recrée pas une nouvelle fiche et ne change pas le fond du contenu. Corrige uniquement les erreurs suivantes :
+- défaut 1 reformulé comme une instruction de correction concrète
+- défaut 2 reformulé comme une instruction de correction concrète
+
+Le prompt de correction image doit être clair, directement copiable dans GPT Image 2 ou un outil équivalent, et ne doit contenir que les corrections à effectuer sur l'image. Si l'image est conforme, ne fournis aucun prompt de correction.
 
 SOURCES VALIDÉES
 ${input.sourcesValidees || "Aucune source validée."}
@@ -570,7 +587,7 @@ export function ImageViewerPage() {
           {!conforme ? (
             <textarea
               onChange={(event) => setVerdict(event.target.value)}
-              placeholder="Colle ici la liste des défauts, un par ligne."
+              placeholder="Colle ici les défauts, ou toute la réponse NON CONFORME."
               value={verdict}
             />
           ) : null}

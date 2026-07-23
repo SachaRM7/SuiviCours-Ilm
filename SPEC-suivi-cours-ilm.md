@@ -265,7 +265,7 @@ L'utilisateur peut ensuite choisir explicitement de les invalider — action des
 ### Vérification d'image (étape 6c)
 L'image déposée est envoyée à Claude avec la synthèse et les références validées, pour contrôle : mentions parasites (« à vérifier », « source non précisée »), verbatim déformés, sources ne correspondant pas à celles validées, texte arabe malformé, contenu tronqué.
 
-Sortie : conforme, ou liste de défauts. En v1 cette étape passe aussi par copier-coller.
+Sortie : conforme, ou liste de défauts accompagnée d'un `PROMPT DE CORRECTION IMAGE` directement copiable dans l'outil de génération d'image. En v1 cette étape passe aussi par copier-coller.
 
 ### Export
 Chaque document est exportable en `.md`. Un module entier est exportable en archive `.zip`. C'est une garantie de non-enfermement, à prévoir dès la v1.
