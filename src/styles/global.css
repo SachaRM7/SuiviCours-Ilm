@@ -25,11 +25,22 @@
   box-sizing: border-box;
 }
 
+html {
+  width: 100%;
+  min-width: 320px;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+}
+
 body {
   margin: 0;
+  width: 100%;
   min-width: 320px;
   min-height: 100vh;
   background: var(--cream);
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+  -webkit-text-size-adjust: 100%;
 }
 
 a {
@@ -101,6 +112,7 @@ summary {
   gap: 20px;
   color: var(--gold-pale);
   font-size: 13.5px;
+  max-width: 100%;
 }
 
 .main-nav a {
@@ -2281,6 +2293,29 @@ summary {
   .crumb__inner,
   .page-wrap {
     width: min(100% - 40px, 920px);
+  }
+
+  .app-header {
+    overflow: hidden;
+  }
+
+  .app-header__inner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .main-nav {
+    width: 100%;
+    gap: 18px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .main-nav::-webkit-scrollbar {
+    display: none;
   }
 
   .shelf-grid {
