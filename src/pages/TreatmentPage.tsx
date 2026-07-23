@@ -88,7 +88,6 @@ const steps: StepDefinition[] = [
     title: "Correction",
     description: "Nettoyer les termes et produire la transcription corrigée.",
     resultArtifactType: "transcription_corrigee",
-    unlocksAfter: "transcription",
     destination: "IA",
     recommendedModelId: "luna",
   },
@@ -512,6 +511,11 @@ export function TreatmentPage() {
           const state = data.course.etapes[step.key];
           const unlocked = isUnlocked(data.course, step);
           const isActive = active?.key === step.key;
+          const directCorrection =
+            step.key === "correction" && !state.fait && !data.course.etapes.transcription.fait;
+          const showBody =
+            (isActive || state.fait || state.obsolete || directCorrection) &&
+            unlocked;
           const artifact = step.resultArtifactType
             ? data.artifacts.find((item) => item.type === step.resultArtifactType)
             : null;
@@ -556,7 +560,7 @@ export function TreatmentPage() {
                 </b>
               </div>
 
-              {(isActive || state.fait || state.obsolete) && unlocked ? (
+              {showBody ? (
                 <div className="step-body">
                   <span className="dest-pill">{step.destination}</span>
                   <p>{step.description}</p>

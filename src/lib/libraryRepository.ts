@@ -383,6 +383,18 @@ export async function saveArtifact(input: {
     createdAt: now,
   };
   const step = stepForArtifact(input.type);
+  const courseUpdates: Record<string, string | boolean | null> = {
+    [`etapes.${step}.fait`]: true,
+    [`etapes.${step}.date`]: now,
+    [`etapes.${step}.obsolete`]: false,
+    updatedAt: now,
+  };
+
+  if (input.type === "transcription_corrigee") {
+    courseUpdates["etapes.transcription.fait"] = true;
+    courseUpdates["etapes.transcription.date"] = now;
+    courseUpdates["etapes.transcription.obsolete"] = false;
+  }
 
   await setDoc(
     doc(
@@ -408,12 +420,7 @@ export async function saveArtifact(input: {
       "cours",
       input.courseId,
     ),
-    {
-      [`etapes.${step}.fait`]: true,
-      [`etapes.${step}.date`]: now,
-      [`etapes.${step}.obsolete`]: false,
-      updatedAt: now,
-    },
+    courseUpdates,
   );
 }
 
