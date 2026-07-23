@@ -185,6 +185,7 @@ export function TreatmentPage() {
   const [selectedAiModels, setSelectedAiModels] = useState<
     Partial<Record<StepKey, AiModelId>>
   >({});
+  const [aiError, setAiError] = useState<string | null>(null);
   const [results, setResults] = useState<Record<StepKey, string>>({
     transcription: "",
     correction: "",
@@ -273,6 +274,7 @@ export function TreatmentPage() {
 
     setAiStep(step.key);
     setNotice(null);
+    setAiError(null);
 
     try {
       const prompt = await buildStepPrompt(step);
@@ -285,6 +287,12 @@ export function TreatmentPage() {
       setResults((current) => ({ ...current, [step.key]: result.text }));
       setNotice(
         `${step.title} générée avec ${selectedModel.label}. Relis puis enregistre.`,
+      );
+    } catch (generationError) {
+      setAiError(
+        generationError instanceof Error
+          ? generationError.message
+          : "La génération IA a échoué. Vérifie la clé API, le quota ou le modèle choisi.",
       );
     } finally {
       setAiStep(null);
@@ -413,6 +421,15 @@ export function TreatmentPage() {
       return;
     }
 
+    const stepTitle = steps.find((item) => item.key === step)?.title ?? "cette étape";
+    const confirmed = window.confirm(
+      `Relancer ${stepTitle.toLowerCase()} ? Les étapes qui dépendent de ce contenu seront marquées obsolètes, mais leurs contenus resteront lisibles.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
     setBusyStep(step);
     try {
       await restartStep({
@@ -479,6 +496,11 @@ export function TreatmentPage() {
       </header>
 
       {notice ? <div className="empty-state notice-state">{notice}</div> : null}
+      {aiError ? (
+        <div className="empty-state empty-state--alert notice-state" role="alert">
+          {aiError}
+        </div>
+      ) : null}
 
       <div className="treatment-steps">
         {steps.map((step, index) => {
@@ -585,7 +607,7 @@ export function TreatmentPage() {
                       >
                         {aiStep === step.key
                           ? "Génération..."
-                          : `Générer avec ${selectedModel.label}`}
+                          : "Lancer la génération"}
                       </button>
                     ) : null}
                     {artifact ? (
