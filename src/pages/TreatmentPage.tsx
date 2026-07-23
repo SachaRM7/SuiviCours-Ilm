@@ -289,6 +289,8 @@ export function TreatmentPage() {
       artifacts: data.artifacts,
       etape: step.promptStep,
       sourceArtifactType: step.sourceArtifactType,
+      includeSourceArtifact: false,
+      includeValidatedSources: false,
     });
   }
 

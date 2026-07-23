@@ -123,17 +123,17 @@ export async function getValidatedSources(context: CourseContext) {
         reference.choixTexte === "personnalise"
           ? reference.textePersonnalise
           : reference.choixTexte === "exact"
-          ? reference.texteExact
-          : reference.texteCours;
+            ? reference.texteExact
+            : reference.texteCours;
       const source = reference.choixSource ?? "";
       return `| ${reference.type} | ${texte} | ${source} |`;
     });
 
   if (rows.length === 0) {
-    return "| Type | Texte | Source validée |\n|---|---|---|\n";
+    return "| Type | Texte | Source validee |\n|---|---|---|\n";
   }
 
-  return `| Type | Texte | Source validée |\n|---|---|---|\n${rows.join("\n")}`;
+  return `| Type | Texte | Source validee |\n|---|---|---|\n${rows.join("\n")}`;
 }
 
 function replaceVariables(template: string, variables: Record<string, string>) {
@@ -148,6 +148,8 @@ export async function buildPromptPayload(input: {
   artifacts: Artifact[];
   etape: PromptStep;
   sourceArtifactType?: ArtifactType;
+  includeSourceArtifact?: boolean;
+  includeValidatedSources?: boolean;
 }) {
   const prompt = await getActivePrompt(input.etape);
 
@@ -158,17 +160,21 @@ export async function buildPromptPayload(input: {
   const sourceArtifact = input.sourceArtifactType
     ? input.artifacts.find((artifact) => artifact.type === input.sourceArtifactType)
     : null;
+  const includeSourceArtifact = input.includeSourceArtifact ?? true;
+  const includeValidatedSources = input.includeValidatedSources ?? true;
   const variables = {
     professeur: input.context.professor.nom,
     duree: String(input.context.professor.horaires.duree),
     vocabulaire:
       (await getVocabularyForModule(input.context.module.slug)) ||
-      "Aucun vocabulaire validé pour ce module.",
-    sources_validees: await getValidatedSources(input.context),
+      "Aucun vocabulaire valide pour ce module.",
+    sources_validees: includeValidatedSources
+      ? await getValidatedSources(input.context)
+      : "[COLLER ICI LES SOURCES VALIDEES]",
   };
   const injected = replaceVariables(prompt.template, variables);
 
-  return sourceArtifact
+  return sourceArtifact && includeSourceArtifact
     ? `${injected}\n\n---\n\nCONTENU SOURCE\n\n${sourceArtifact.contenu}`
     : injected;
 }
