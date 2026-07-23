@@ -1,13 +1,14 @@
-import { useCallback, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAsync } from "../hooks/useAsync";
 import {
   getCourseArtifactsByPath,
   getLibraryImage,
   listCourseReferences,
+  listImagesForModule,
   saveCourseImageVerification,
 } from "../lib/libraryRepository";
-import type { CourseImage } from "../types/domain";
+import type { CourseImage, LibraryImage } from "../types/domain";
 
 function parseDefects(value: string) {
   return value
@@ -53,10 +54,12 @@ ${input.synthese || "Synthèse absente."}`;
 }
 
 export function ImageViewerPage() {
+  const navigate = useNavigate();
   const { courseId, imageId } = useParams();
   const [conforme, setConforme] = useState(true);
   const [verdict, setVerdict] = useState("");
   const [notice, setNotice] = useState<string | null>(null);
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [savedVerification, setSavedVerification] = useState<
     CourseImage["verification"] | null
   >(null);
@@ -71,16 +74,17 @@ export function ImageViewerPage() {
       return null;
     }
 
-    const [artifacts, references] = await Promise.all([
+    const [artifacts, references, moduleImages] = await Promise.all([
       getCourseArtifactsByPath(image.professor.id, image.module.id, image.course.id),
       listCourseReferences({
         professorId: image.professor.id,
         moduleId: image.module.id,
         courseId: image.course.id,
       }),
+      listImagesForModule(image.module.id),
     ]);
 
-    return { ...image, artifacts, references };
+    return { ...image, artifacts, references, moduleImages };
   }, [courseId, imageId]);
   const { data, error, loading } = useAsync(load);
   const synthese =
@@ -102,6 +106,65 @@ export function ImageViewerPage() {
         .join("\n"),
     [data?.references],
   );
+
+  const imageNavigation = useMemo(() => {
+    if (!data) {
+      return { previous: null, next: null };
+    }
+
+    const index = data.moduleImages.findIndex(
+      (item) => item.course.id === data.course.id && item.image.id === data.image.id,
+    );
+
+    return {
+      previous: index > 0 ? data.moduleImages[index - 1] : null,
+      next:
+        index >= 0 && index < data.moduleImages.length - 1
+          ? data.moduleImages[index + 1]
+          : null,
+    };
+  }, [data]);
+
+  const goToImage = useCallback(
+    (target: LibraryImage | null) => {
+      if (!target) {
+        return;
+      }
+
+      navigate(`/images/${target.course.id}/${target.image.id}`);
+    },
+    [navigate],
+  );
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "ArrowLeft") {
+        goToImage(imageNavigation.previous);
+      }
+
+      if (event.key === "ArrowRight") {
+        goToImage(imageNavigation.next);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [goToImage, imageNavigation.next, imageNavigation.previous]);
+
+  function handleTouchEnd(clientX: number) {
+    if (touchStartX === null) {
+      return;
+    }
+
+    const delta = clientX - touchStartX;
+    setTouchStartX(null);
+
+    if (Math.abs(delta) < 50) {
+      return;
+    }
+
+    goToImage(delta > 0 ? imageNavigation.previous : imageNavigation.next);
+  }
 
   async function copyVerificationPrompt() {
     if (!data) {
@@ -190,7 +253,24 @@ export function ImageViewerPage() {
         </div>
       </div>
 
-      <div className="viewer-stage">
+      <div
+        className="viewer-stage"
+        onTouchEnd={(event) =>
+          handleTouchEnd(event.changedTouches[0]?.clientX ?? 0)
+        }
+        onTouchStart={(event) =>
+          setTouchStartX(event.changedTouches[0]?.clientX ?? null)
+        }
+      >
+        <button
+          aria-label="Image précédente"
+          className="viewer-nav viewer-nav--left"
+          disabled={!imageNavigation.previous}
+          onClick={() => goToImage(imageNavigation.previous)}
+          type="button"
+        >
+          ‹
+        </button>
         {hasRealImage ? (
           <img alt="" src={data.image.url} />
         ) : (
@@ -199,6 +279,15 @@ export function ImageViewerPage() {
             <span>Fiche de mémorisation</span>
           </div>
         )}
+        <button
+          aria-label="Image suivante"
+          className="viewer-nav viewer-nav--right"
+          disabled={!imageNavigation.next}
+          onClick={() => goToImage(imageNavigation.next)}
+          type="button"
+        >
+          ›
+        </button>
       </div>
 
       {data.course.etapes.image.obsolete ? (

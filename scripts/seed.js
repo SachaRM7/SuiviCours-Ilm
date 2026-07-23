@@ -29,11 +29,36 @@ async function loadEnv() {
 function parsePrompts(markdown) {
   const stepByNumber = {
     1: { etape: "transcription", version: 2 },
-    2: { etape: "correction", version: 3 },
-    3: { etape: "synthese", version: 4 },
-    4: { etape: "sources", version: 1 },
-    5: { etape: "fiche", version: 2 },
-    6: { etape: "prompt_image", version: 3 },
+    2: {
+      etape: "correction",
+      version: 3,
+      aiProvider: "openai",
+      aiModel: "gpt-5.6-luna",
+    },
+    3: {
+      etape: "synthese",
+      version: 4,
+      aiProvider: "anthropic",
+      aiModel: "claude-sonnet-5-20260715",
+    },
+    4: {
+      etape: "sources",
+      version: 1,
+      aiProvider: "anthropic",
+      aiModel: "claude-sonnet-5-20260715",
+    },
+    5: {
+      etape: "fiche",
+      version: 2,
+      aiProvider: "openai",
+      aiModel: "gpt-5.6-luna",
+    },
+    6: {
+      etape: "prompt_image",
+      version: 3,
+      aiProvider: "openai",
+      aiModel: "gpt-5.6-luna",
+    },
   };
   const prompts = [];
   const pattern = /## Prompt (\d+) — ([^\n]+)[\s\S]*?```([\s\S]*?)```/g;
@@ -53,6 +78,8 @@ function parsePrompts(markdown) {
       template: match[3].trim(),
       version: meta.version,
       actif: true,
+      aiProvider: meta.aiProvider ?? null,
+      aiModel: meta.aiModel ?? null,
     });
   }
 

@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAsync } from "../hooks/useAsync";
+import { generateWithAi } from "../lib/aiRepository";
 import {
   getCourseArtifactsByPath,
   getCourseContext,
@@ -17,13 +18,14 @@ import {
   parseReferences,
   parseShortTitle,
 } from "../lib/pipelineParsers";
-import { buildPromptPayload } from "../lib/promptRepository";
+import { buildPromptPayload, getActivePrompt } from "../lib/promptRepository";
 import type {
   ArtifactType,
   Course,
   PromptStep,
   StepKey,
 } from "../types/domain";
+import type { AiProvider } from "../lib/aiRepository";
 
 type StepDefinition = {
   key: StepKey;
@@ -34,6 +36,8 @@ type StepDefinition = {
   sourceArtifactType?: ArtifactType;
   unlocksAfter?: StepKey;
   destination: string;
+  aiProvider?: AiProvider;
+  aiModel?: string;
 };
 
 const steps: StepDefinition[] = [
@@ -52,6 +56,8 @@ const steps: StepDefinition[] = [
     resultArtifactType: "transcription_corrigee",
     unlocksAfter: "transcription",
     destination: "Claude",
+    aiProvider: "openai",
+    aiModel: "gpt-5.6-luna",
   },
   {
     key: "synthese",
@@ -62,6 +68,8 @@ const steps: StepDefinition[] = [
     sourceArtifactType: "transcription_corrigee",
     unlocksAfter: "correction",
     destination: "Claude",
+    aiProvider: "anthropic",
+    aiModel: "claude-sonnet-5-20260715",
   },
   {
     key: "sources",
@@ -71,6 +79,8 @@ const steps: StepDefinition[] = [
     sourceArtifactType: "synthese",
     unlocksAfter: "synthese",
     destination: "Claude",
+    aiProvider: "anthropic",
+    aiModel: "claude-sonnet-5-20260715",
   },
   {
     key: "fiche",
@@ -81,6 +91,8 @@ const steps: StepDefinition[] = [
     sourceArtifactType: "synthese",
     unlocksAfter: "sources",
     destination: "Claude",
+    aiProvider: "openai",
+    aiModel: "gpt-5.6-luna",
   },
   {
     key: "image",
@@ -91,6 +103,8 @@ const steps: StepDefinition[] = [
     sourceArtifactType: "synthese",
     unlocksAfter: "sources",
     destination: "GPT Image",
+    aiProvider: "openai",
+    aiModel: "gpt-5.6-luna",
   },
 ];
 
@@ -139,6 +153,7 @@ export function TreatmentPage() {
   const { courseId } = useParams();
   const [reloadKey, setReloadKey] = useState(0);
   const [busyStep, setBusyStep] = useState<StepKey | null>(null);
+  const [aiStep, setAiStep] = useState<StepKey | null>(null);
   const [results, setResults] = useState<Record<StepKey, string>>({
     transcription: "",
     correction: "",
@@ -191,6 +206,53 @@ export function TreatmentPage() {
     });
     await navigator.clipboard.writeText(payload);
     setNotice(`Prompt ${step.title.toLowerCase()} copié.`);
+  }
+
+  async function buildStepPrompt(step: StepDefinition) {
+    if (!data) {
+      return "";
+    }
+
+    return buildPromptPayload({
+      context: {
+        professor: data.professor,
+        module: data.module,
+        course: data.course,
+      },
+      artifacts: data.artifacts,
+      etape: step.promptStep,
+      sourceArtifactType: step.sourceArtifactType,
+    });
+  }
+
+  async function handleGenerateAi(step: StepDefinition) {
+    if (!data || !step.aiProvider || !step.aiModel) {
+      return;
+    }
+
+    setAiStep(step.key);
+    setNotice(null);
+
+    try {
+      const prompt = await buildStepPrompt(step);
+      const promptTemplate = await getActivePrompt(step.promptStep);
+      const provider = promptTemplate?.aiProvider ?? step.aiProvider;
+      const model = promptTemplate?.aiModel ?? step.aiModel;
+
+      if (!provider || !model) {
+        throw new Error("Aucun modèle IA n'est configuré pour cette étape.");
+      }
+
+      const result = await generateWithAi({
+        provider,
+        model,
+        prompt,
+      });
+      setResults((current) => ({ ...current, [step.key]: result.text }));
+      setNotice(`${step.title} générée avec ${result.model}. Relis puis enregistre.`);
+    } finally {
+      setAiStep(null);
+    }
   }
 
   async function harvestStepOutput(step: StepDefinition, output: string) {
@@ -442,6 +504,16 @@ export function TreatmentPage() {
                     >
                       Copier le prompt
                     </button>
+                    {step.aiProvider && !state.fait ? (
+                      <button
+                        className="tool on"
+                        disabled={aiStep === step.key}
+                        onClick={() => handleGenerateAi(step)}
+                        type="button"
+                      >
+                        {aiStep === step.key ? "Génération..." : "Générer avec IA"}
+                      </button>
+                    ) : null}
                     {artifact ? (
                       <Link
                         className="tool"

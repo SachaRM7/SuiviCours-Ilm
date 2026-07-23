@@ -156,6 +156,8 @@ export type PromptTemplate = {
   template: string;
   version: number;
   actif: boolean;
+  aiProvider?: "openai" | "anthropic";
+  aiModel?: string;
 };
 
 export type ModuleSlugReservation = {

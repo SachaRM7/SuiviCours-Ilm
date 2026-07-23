@@ -654,6 +654,11 @@ textarea {
   padding: 10px 14px;
 }
 
+.search--large {
+  font-size: 16px;
+  padding: 13px 16px;
+}
+
 .search:focus {
   border-color: var(--gold);
   outline: none;
@@ -1210,11 +1215,44 @@ textarea {
 }
 
 .viewer-stage {
+  position: relative;
   flex: 1;
   min-height: 0;
   display: grid;
   place-items: center;
   padding: 0 20px 20px;
+}
+
+.viewer-nav {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  transform: translateY(-50%);
+  border: 1px solid rgba(217, 198, 168, 0.35);
+  border-radius: 50%;
+  background: rgba(24, 53, 45, 0.78);
+  color: var(--gold-pale);
+  cursor: pointer;
+  font-family: "Cormorant Garamond", serif;
+  font-size: 30px;
+  line-height: 1;
+}
+
+.viewer-nav--left {
+  left: max(20px, calc((100vw - 920px) / 2));
+}
+
+.viewer-nav--right {
+  right: max(20px, calc((100vw - 920px) / 2));
+}
+
+.viewer-nav:disabled {
+  cursor: default;
+  opacity: 0.28;
 }
 
 .viewer-stage img,
@@ -1532,6 +1570,16 @@ textarea {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 14px;
   align-items: end;
+}
+
+.prompt-model-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 180px) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.prompt-model-grid .field {
+  margin-top: 0;
 }
 
 .prompt-editor__top .field {
@@ -1931,7 +1979,8 @@ textarea {
   }
 
   .prompt-admin,
-  .prompt-editor__top {
+  .prompt-editor__top,
+  .prompt-model-grid {
     grid-template-columns: 1fr;
   }
 

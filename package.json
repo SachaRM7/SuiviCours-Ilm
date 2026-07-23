@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "seed": "node scripts/seed.js"
+    "seed": "node scripts/seed.js",
+    "functions:install": "npm install --prefix functions"
   },
   "dependencies": {
     "firebase": "^12.0.0",

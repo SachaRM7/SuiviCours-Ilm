@@ -21,6 +21,9 @@ export function PromptsPage() {
   const [title, setTitle] = useState("");
   const [template, setTemplate] = useState("");
   const [active, setActive] = useState(true);
+  const [aiProvider, setAiProvider] =
+    useState<PromptTemplate["aiProvider"]>("openai");
+  const [aiModel, setAiModel] = useState("");
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const load = useCallback(() => {
@@ -42,6 +45,8 @@ export function PromptsPage() {
     setTitle(selected.titre);
     setTemplate(selected.template);
     setActive(selected.actif);
+    setAiProvider(selected.aiProvider ?? "openai");
+    setAiModel(selected.aiModel ?? "");
   }, [selected]);
 
   async function copyPrompt() {
@@ -69,6 +74,8 @@ export function PromptsPage() {
         titre: title.trim() || selected.titre,
         template,
         actif: active,
+        aiProvider,
+        aiModel: aiModel.trim(),
       });
       setReloadKey((key) => key + 1);
       setNotice("Prompt enregistré.");
@@ -138,6 +145,33 @@ export function PromptsPage() {
                   type="checkbox"
                 />
                 Prompt actif
+              </label>
+            </div>
+
+            <div className="prompt-model-grid">
+              <label className="field">
+                <span>Provider IA</span>
+                <select
+                  onChange={(event) =>
+                    setAiProvider(event.target.value as PromptTemplate["aiProvider"])
+                  }
+                  value={aiProvider}
+                >
+                  <option value="openai">OpenAI</option>
+                  <option value="anthropic">Anthropic</option>
+                </select>
+              </label>
+              <label className="field">
+                <span>Modèle recommandé</span>
+                <input
+                  onChange={(event) => setAiModel(event.target.value)}
+                  placeholder={
+                    aiProvider === "anthropic"
+                      ? "claude-sonnet-5-20260715"
+                      : "gpt-5.6-luna"
+                  }
+                  value={aiModel}
+                />
               </label>
             </div>
 

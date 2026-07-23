@@ -28,6 +28,8 @@ function promptFromDoc(doc: QueryDocumentSnapshot<DocumentData>): PromptTemplate
     template: data.template,
     version: data.version,
     actif: data.actif,
+    aiProvider: data.aiProvider,
+    aiModel: data.aiModel,
   };
 }
 
@@ -70,11 +72,15 @@ export async function updatePromptTemplate(input: {
   titre: string;
   template: string;
   actif: boolean;
+  aiProvider?: PromptTemplate["aiProvider"];
+  aiModel?: string;
 }) {
   await updateDoc(doc(db, "prompts", input.promptId), {
     titre: input.titre,
     template: input.template,
     actif: input.actif,
+    aiProvider: input.aiProvider ?? null,
+    aiModel: input.aiModel ?? null,
   });
 }
 
