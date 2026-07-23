@@ -127,6 +127,7 @@ function imageFromDoc(doc: QueryDocumentSnapshot<DocumentData>): CourseImage {
   return {
     id: doc.id,
     url: data.url,
+    storagePath: data.storagePath,
     promptUtilise: data.promptUtilise,
     verification: data.verification,
     ordre: data.ordre,
@@ -477,9 +478,10 @@ export async function saveCourseImage(input: {
 }) {
   const now = new Date().toISOString();
   const imageId = `image-${Date.now()}`;
+  const storagePath = `professeurs/${input.professorId}/modules/${input.moduleId}/cours/${input.courseId}/images/${imageId}-${input.file.name}`;
   const storageRef = ref(
     storage,
-    `professeurs/${input.professorId}/modules/${input.moduleId}/cours/${input.courseId}/images/${imageId}-${input.file.name}`,
+    storagePath,
   );
   const uploaded = await uploadBytes(storageRef, input.file);
   const url = await getDownloadURL(uploaded.ref);
@@ -498,6 +500,7 @@ export async function saveCourseImage(input: {
     ),
     {
       url,
+      storagePath,
       promptUtilise: input.promptUtilise,
       verification: { faite: false, conforme: false, defauts: [] },
       ordre: Date.now(),

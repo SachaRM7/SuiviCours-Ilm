@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { getBlob, ref } from "firebase/storage";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAsync } from "../hooks/useAsync";
+import { storage } from "../lib/firebase";
 import {
   getCourseArtifactsByPath,
   getLibraryImage,
@@ -52,6 +54,39 @@ ${input.promptUtilise}
 
 SYNTHÈSE DU COURS
 ${input.synthese || "Synthèse absente."}`;
+}
+
+function storagePathFromDownloadUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    const encodedPath = parsed.pathname.match(/\/o\/([^/]+)$/)?.[1];
+    return encodedPath ? decodeURIComponent(encodedPath) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function imageBlobFromStorage(image: CourseImage) {
+  const storagePath = image.storagePath ?? storagePathFromDownloadUrl(image.url);
+
+  if (storagePath) {
+    return getBlob(ref(storage, storagePath));
+  }
+
+  const response = await fetch(image.url);
+  if (!response.ok) {
+    throw new Error("download failed");
+  }
+
+  const contentType = response.headers.get("content-type") ?? "";
+  const blob = await response.blob();
+  const type = blob.type || contentType;
+
+  if (!type.startsWith("image/")) {
+    throw new Error(`not an image: ${type || "unknown"}`);
+  }
+
+  return blob.type ? blob : blob.slice(0, blob.size, type);
 }
 
 export function ImageViewerPage() {
@@ -221,12 +256,7 @@ export function ImageViewerPage() {
     setNotice(null);
 
     try {
-      const response = await fetch(data.image.url);
-      if (!response.ok) {
-        throw new Error("download failed");
-      }
-
-      const blob = await response.blob();
+      const blob = await imageBlobFromStorage(data.image);
       const extension = blob.type.split("/")[1]?.replace("jpeg", "jpg") || "png";
       const fileName = `${data.module.slug}-cours-${String(
         data.course.numero,

@@ -94,6 +94,7 @@ export type CourseReference = {
 export type CourseImage = {
   id: string;
   url: string;
+  storagePath?: string;
   promptUtilise: string;
   verification: {
     faite: boolean;
