@@ -66,27 +66,73 @@ function storagePathFromDownloadUrl(url: string) {
   }
 }
 
+function detectImageFormat(bytes: Uint8Array, declaredType: string) {
+  if (
+    bytes[0] === 0x89 &&
+    bytes[1] === 0x50 &&
+    bytes[2] === 0x4e &&
+    bytes[3] === 0x47
+  ) {
+    return { mime: "image/png", extension: "png" };
+  }
+
+  if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+    return { mime: "image/jpeg", extension: "jpg" };
+  }
+
+  if (
+    bytes[0] === 0x52 &&
+    bytes[1] === 0x49 &&
+    bytes[2] === 0x46 &&
+    bytes[3] === 0x46 &&
+    bytes[8] === 0x57 &&
+    bytes[9] === 0x45 &&
+    bytes[10] === 0x42 &&
+    bytes[11] === 0x50
+  ) {
+    return { mime: "image/webp", extension: "webp" };
+  }
+
+  if (declaredType.startsWith("image/")) {
+    return {
+      mime: declaredType,
+      extension: declaredType.split("/")[1]?.replace("jpeg", "jpg") || "png",
+    };
+  }
+
+  return null;
+}
+
 async function imageBlobFromStorage(image: CourseImage) {
   const storagePath = image.storagePath ?? storagePathFromDownloadUrl(image.url);
+  let blob: Blob;
 
   if (storagePath) {
-    return getBlob(ref(storage, storagePath));
+    blob = await getBlob(ref(storage, storagePath));
+  } else {
+    const response = await fetch(image.url);
+    if (!response.ok) {
+      throw new Error("download failed");
+    }
+
+    const contentType = response.headers.get("content-type") ?? "";
+    const fetchedBlob = await response.blob();
+    blob = fetchedBlob.type
+      ? fetchedBlob
+      : fetchedBlob.slice(0, fetchedBlob.size, contentType);
   }
 
-  const response = await fetch(image.url);
-  if (!response.ok) {
-    throw new Error("download failed");
+  const header = new Uint8Array(await blob.slice(0, 16).arrayBuffer());
+  const format = detectImageFormat(header, blob.type);
+
+  if (!format) {
+    throw new Error(`not an image: ${blob.type || "unknown"}`);
   }
 
-  const contentType = response.headers.get("content-type") ?? "";
-  const blob = await response.blob();
-  const type = blob.type || contentType;
-
-  if (!type.startsWith("image/")) {
-    throw new Error(`not an image: ${type || "unknown"}`);
-  }
-
-  return blob.type ? blob : blob.slice(0, blob.size, type);
+  return {
+    blob: blob.type === format.mime ? blob : blob.slice(0, blob.size, format.mime),
+    ...format,
+  };
 }
 
 export function ImageViewerPage() {
@@ -256,13 +302,12 @@ export function ImageViewerPage() {
     setNotice(null);
 
     try {
-      const blob = await imageBlobFromStorage(data.image);
-      const extension = blob.type.split("/")[1]?.replace("jpeg", "jpg") || "png";
+      const { blob, extension, mime } = await imageBlobFromStorage(data.image);
       const fileName = `${data.module.slug}-cours-${String(
         data.course.numero,
       ).padStart(2, "0")}-fiche-image.${extension}`;
       const file = new File([blob], fileName, {
-        type: blob.type || "image/png",
+        type: mime,
       });
 
       if (
