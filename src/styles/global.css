@@ -253,6 +253,112 @@ summary {
   font-weight: 600;
 }
 
+.course-entry {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid var(--cream-deep);
+  padding-top: 8px;
+}
+
+.course-entry h2 {
+  margin: -5px 0 0;
+  color: var(--green);
+  font-family: "Cormorant Garamond", serif;
+  font-size: 28px;
+  font-weight: 600;
+}
+
+.course-entry-list {
+  display: grid;
+  gap: 10px;
+}
+
+.course-entry-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 13px;
+  border: 1px solid var(--cream-deep);
+  border-radius: var(--radius-card);
+  background: var(--white);
+  padding: 14px 15px;
+  transition:
+    border-color 150ms ease,
+    transform 150ms ease;
+}
+
+.course-entry-card:hover {
+  border-color: var(--gold-pale);
+  transform: translateY(-1px);
+}
+
+.course-entry-card__number {
+  display: inline-grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(172, 143, 101, 0.13);
+  color: var(--green);
+  font-family: "Cormorant Garamond", serif;
+  font-size: 25px;
+  font-weight: 700;
+}
+
+.course-entry-card--complete .course-entry-card__number {
+  background: var(--green);
+  color: var(--cream);
+}
+
+.course-entry-card__body {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.course-entry-card__body strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.course-entry-card__body small {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.course-entry-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 3px;
+}
+
+.course-entry-card__badges em,
+.course-entry-card__status {
+  border-radius: var(--radius-pill);
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 700;
+  line-height: 1;
+  padding: 5px 8px;
+}
+
+.course-entry-card__badges em {
+  background: var(--cream);
+  color: var(--ink-soft);
+}
+
+.course-entry-card__status {
+  background: rgba(24, 53, 45, 0.1);
+  color: var(--green);
+  white-space: nowrap;
+}
+
 .empty-state {
   padding: 24px;
 }

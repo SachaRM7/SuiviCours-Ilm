@@ -3,7 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { useAsync } from "../hooks/useAsync";
 import { exportMetadataSummary, exportModuleAsZip } from "../lib/exportLibrary";
 import { getModuleExportData } from "../lib/libraryRepository";
-import type { ArtifactType, CourseImage, StepKey } from "../types/domain";
+import type { Artifact, ArtifactType, Course, CourseImage, StepKey } from "../types/domain";
 
 type ShelfKey = "syntheses" | "fiches" | "images" | "transcriptions";
 
@@ -70,6 +70,49 @@ function imageStatus(images: CourseImage[]) {
   ].filter(Boolean);
 
   return parts.join(" · ");
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+function courseProgress(course: Course) {
+  const done = stepKeys.filter(
+    (step) => course.etapes[step].fait && !course.etapes[step].obsolete,
+  ).length;
+
+  return {
+    done,
+    total: stepKeys.length,
+    complete: done === stepKeys.length,
+  };
+}
+
+function hasArtifact(artifacts: Artifact[], type: ArtifactType) {
+  return artifacts.some((artifact) => artifact.type === type);
+}
+
+function courseEntryHref(input: { course: Course; artifacts: Artifact[] }) {
+  if (hasArtifact(input.artifacts, "synthese")) {
+    return `/cours/${input.course.id}/synthese`;
+  }
+
+  return `/cours/${input.course.id}/traitement`;
+}
+
+function courseBadges(input: { artifacts: Artifact[]; images: CourseImage[] }) {
+  return [
+    hasArtifact(input.artifacts, "synthese") ? "Synthèse" : "",
+    hasArtifact(input.artifacts, "fiche") ? "Fiche" : "",
+    input.images.some((image) => image.verification.faite && image.verification.conforme)
+      ? "Image"
+      : "",
+    hasArtifact(input.artifacts, "transcription_corrigee") ? "Transcription" : "",
+  ].filter(Boolean);
 }
 
 export function ModulePage() {
@@ -193,6 +236,58 @@ export function ModulePage() {
                 </small>
               </Link>
             ))}
+          </div>
+
+          <div className="course-entry">
+            <div>
+              <p className="eyebrow">Cours</p>
+              <h2>Ouvrir un cours complet</h2>
+            </div>
+
+            {data.courses.length > 0 ? (
+              <div className="course-entry-list">
+                {[...data.courses]
+                  .sort((left, right) => right.course.numero - left.course.numero)
+                  .map((item) => {
+                    const progress = courseProgress(item.course);
+                    const badges = courseBadges(item);
+
+                    return (
+                      <Link
+                        className={
+                          progress.complete
+                            ? "course-entry-card course-entry-card--complete"
+                            : "course-entry-card"
+                        }
+                        key={item.course.id}
+                        to={courseEntryHref(item)}
+                      >
+                        <span className="course-entry-card__number">
+                          {item.course.numero}
+                        </span>
+                        <span className="course-entry-card__body">
+                          <strong>{item.course.titre || `Cours ${item.course.numero}`}</strong>
+                          <small>{formatDate(item.course.date)}</small>
+                          {badges.length > 0 ? (
+                            <span className="course-entry-card__badges">
+                              {badges.map((badge) => (
+                                <em key={badge}>{badge}</em>
+                              ))}
+                            </span>
+                          ) : null}
+                        </span>
+                        <span className="course-entry-card__status">
+                          {progress.complete
+                            ? "Terminé"
+                            : `${progress.done}/${progress.total}`}
+                        </span>
+                      </Link>
+                    );
+                  })}
+              </div>
+            ) : (
+              <div className="empty-state">Aucun cours pour ce module.</div>
+            )}
           </div>
 
           <div className="module-actions">
