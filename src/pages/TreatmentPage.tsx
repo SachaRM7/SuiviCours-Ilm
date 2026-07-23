@@ -51,6 +51,7 @@ type AiModelOption = {
 };
 
 type PromptFallback = {
+  stepKey: StepKey;
   title: string;
   payload: string;
 };
@@ -301,8 +302,8 @@ export function TreatmentPage() {
         return;
       }
 
-      setPromptFallback({ title: step.title, payload });
-      setNotice("Prompt affiché ci-dessous.");
+      setPromptFallback({ stepKey: step.key, title: step.title, payload });
+      setNotice("Prompt prêt dans l'étape concernée.");
     } catch (copyError) {
       setAiError(
         copyError instanceof Error
@@ -327,8 +328,8 @@ export function TreatmentPage() {
       if (copied) {
         setNotice(`Prompt ${step.title.toLowerCase()} copié.`);
       } else {
-        setPromptFallback({ title: step.title, payload });
-        setNotice("Prompt prêt. Copie-le depuis le bloc affiché ci-dessous.");
+        setPromptFallback({ stepKey: step.key, title: step.title, payload });
+        setNotice("Prompt prêt dans l'étape concernée.");
       }
     } catch (copyError) {
       setAiError(
@@ -595,36 +596,6 @@ export function TreatmentPage() {
           {aiError}
         </div>
       ) : null}
-      {promptFallback ? (
-        <div className="prompt-fallback">
-          <div className="prompt-fallback__head">
-            <div>
-              <strong>Prompt {promptFallback.title.toLowerCase()} prêt</strong>
-              <span>Si la copie automatique bloque, copie ce contenu.</span>
-            </div>
-            <button
-              className="tool"
-              onClick={async () => {
-                const copied = await copyText(promptFallback.payload);
-                setNotice(
-                  copied
-                    ? "Prompt copié."
-                    : "Sélectionne le texte puis copie-le manuellement.",
-                );
-              }}
-              type="button"
-            >
-              Copier
-            </button>
-          </div>
-          <textarea
-            onFocus={(event) => event.target.select()}
-            readOnly
-            value={promptFallback.payload}
-          />
-        </div>
-      ) : null}
-
       <div className="treatment-steps">
         {steps.map((step, index) => {
           const state = data.course.etapes[step.key];
@@ -789,6 +760,30 @@ export function TreatmentPage() {
                       </button>
                     ) : null}
                   </div>
+                  {promptFallback?.stepKey === step.key ? (
+                    <div className="prompt-fallback">
+                      <div>
+                        <strong>
+                          Prompt {promptFallback.title.toLowerCase()} prêt
+                        </strong>
+                        <span>Utilise ce bouton si la copie directe bloque.</span>
+                      </div>
+                      <button
+                        className="tool"
+                        onClick={async () => {
+                          const copied = await copyText(promptFallback.payload);
+                          setNotice(
+                            copied
+                              ? "Prompt copié."
+                              : "La copie automatique est bloquée sur ce navigateur.",
+                          );
+                        }}
+                        type="button"
+                      >
+                        Copier
+                      </button>
+                    </div>
+                  ) : null}
 
                   {!state.fait ? (
                     <div className="pipeline-paste">
