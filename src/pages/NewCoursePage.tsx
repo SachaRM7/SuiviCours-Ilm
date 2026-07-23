@@ -101,11 +101,7 @@ export function NewCoursePage() {
         date: `${date}T${time || "00:00"}:00`,
         audioFile: input?.quick ? null : audioFile,
       });
-      navigate(
-        input?.quick
-          ? `/cours/${courseId}/traitement`
-          : `/cours/${courseId}/synthese/edit`,
-      );
+      navigate(`/cours/${courseId}/traitement`);
     } catch (reason) {
       setMessage(
         reason instanceof Error ? reason.message : "Impossible de créer le cours.",
@@ -125,7 +121,7 @@ export function NewCoursePage() {
       <div>
         <h1 className="page-title">Nouveau cours</h1>
         <p className="lede">
-          Le titre peut rester vide : il viendra de la synthèse.
+          Le titre peut rester vide : il viendra de la synthèse plus tard.
         </p>
       </div>
 
@@ -298,7 +294,7 @@ export function NewCoursePage() {
           {message ? <p className="form-error">{message}</p> : null}
 
           <button className="button button--primary" disabled={saving}>
-            {saving ? "Création..." : "Créer et saisir la synthèse"}
+            {saving ? "Création..." : "Créer et ouvrir le traitement"}
           </button>
         </form>
       ) : null}

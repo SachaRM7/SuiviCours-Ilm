@@ -78,7 +78,8 @@ const steps: StepDefinition[] = [
     key: "transcription",
     promptStep: "transcription",
     title: "Transcription",
-    description: "Transcrire l'audio dans Notebook Gemini.",
+    description:
+      "Transcrire l'audio dans Notebook Gemini, ou marquer fait si tu as déjà la transcription corrigée.",
     destination: "Notebook Gemini",
   },
   {
