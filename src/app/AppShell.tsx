@@ -15,7 +15,7 @@ export function AppShell() {
   const label = sectionLabel[location.pathname] ?? "Cours";
 
   return (
-    <>
+    <div className="app-shell">
       <header className="app-header">
         <div className="app-header__inner">
           <NavLink to="/" className="brand" aria-label="Accueil">
@@ -43,6 +43,6 @@ export function AppShell() {
       <main className="page-wrap">
         <Outlet />
       </main>
-    </>
+    </div>
   );
 }

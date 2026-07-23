@@ -29,18 +29,36 @@ html {
   width: 100%;
   min-width: 320px;
   overflow-x: hidden;
+  overflow-x: clip;
+  overscroll-behavior-y: none;
   overscroll-behavior-x: none;
 }
 
 body {
   margin: 0;
   width: 100%;
+  max-width: 100vw;
   min-width: 320px;
   min-height: 100vh;
   background: var(--cream);
   overflow-x: hidden;
+  overflow-x: clip;
+  overscroll-behavior-y: none;
   overscroll-behavior-x: none;
+  touch-action: pan-y;
   -webkit-text-size-adjust: 100%;
+}
+
+#root,
+.app-shell {
+  position: relative;
+  width: 100%;
+  max-width: 100vw;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-x: clip;
+  overscroll-behavior: none;
+  touch-action: pan-y;
 }
 
 a {
