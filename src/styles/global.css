@@ -58,7 +58,7 @@ body {
   overflow-x: hidden;
   overflow-x: clip;
   overscroll-behavior: none;
-  touch-action: pan-y;
+  touch-action: pan-y pinch-zoom;
 }
 
 a {

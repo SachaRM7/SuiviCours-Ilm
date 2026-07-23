@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../features/auth/useAuth";
 
@@ -13,6 +14,52 @@ export function AppShell() {
   const { user, signOut } = useAuth();
   const location = useLocation();
   const label = sectionLabel[location.pathname] ?? "Cours";
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    function allowsHorizontalGesture(target: EventTarget | null) {
+      return (
+        target instanceof Element &&
+        Boolean(target.closest(".main-nav, .image-viewer"))
+      );
+    }
+
+    function onTouchStart(event: TouchEvent) {
+      if (event.touches.length !== 1 || allowsHorizontalGesture(event.target)) {
+        touchStart.current = null;
+        return;
+      }
+
+      const touch = event.touches[0];
+      touchStart.current = { x: touch.clientX, y: touch.clientY };
+    }
+
+    function onTouchMove(event: TouchEvent) {
+      if (
+        event.touches.length !== 1 ||
+        !touchStart.current ||
+        allowsHorizontalGesture(event.target)
+      ) {
+        return;
+      }
+
+      const touch = event.touches[0];
+      const deltaX = touch.clientX - touchStart.current.x;
+      const deltaY = touch.clientY - touchStart.current.y;
+
+      if (Math.abs(deltaX) > 8 && Math.abs(deltaX) > Math.abs(deltaY) * 1.15) {
+        event.preventDefault();
+      }
+    }
+
+    document.addEventListener("touchstart", onTouchStart, { passive: true });
+    document.addEventListener("touchmove", onTouchMove, { passive: false });
+
+    return () => {
+      document.removeEventListener("touchstart", onTouchStart);
+      document.removeEventListener("touchmove", onTouchMove);
+    };
+  }, []);
 
   return (
     <div className="app-shell">
