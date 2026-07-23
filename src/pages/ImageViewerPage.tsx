@@ -228,13 +228,29 @@ export function ImageViewerPage() {
 
       const blob = await response.blob();
       const extension = blob.type.split("/")[1]?.replace("jpeg", "jpg") || "png";
+      const fileName = `${data.module.slug}-cours-${String(
+        data.course.numero,
+      ).padStart(2, "0")}-fiche-image.${extension}`;
+      const file = new File([blob], fileName, {
+        type: blob.type || "image/png",
+      });
+
+      if (
+        navigator.share &&
+        navigator.canShare?.({ files: [file] })
+      ) {
+        await navigator.share({
+          files: [file],
+          title: data.course.titre || `Cours ${data.course.numero}`,
+        });
+        setNotice("Partage ouvert.");
+        return;
+      }
+
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = objectUrl;
-      link.download = `${data.module.slug}-cours-${String(data.course.numero).padStart(
-        2,
-        "0",
-      )}-fiche-image.${extension}`;
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
       link.remove();
