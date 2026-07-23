@@ -7,7 +7,7 @@ export type ParsedVocabularyTerm = Pick<
 
 export type ParsedReference = Omit<
   CourseReference,
-  "id" | "choixTexte" | "choixSource" | "valide"
+  "id" | "choixTexte" | "choixSource" | "textePersonnalise" | "valide"
 >;
 
 export function vocabularyKey(value: string) {
@@ -120,28 +120,15 @@ function normalizeStatus(value: string): ReferenceStatus {
   return "exacte";
 }
 
-function normalizeReferenceType(value: string): ParsedReference["type"] {
-  const normalized = value
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .toLowerCase();
-
-  if (normalized.includes("verset") || normalized.includes("coran")) {
-    return "verset";
-  }
-
-  if (normalized.includes("savant") || normalized.includes("citation")) {
-    return "parole_savant";
-  }
-
-  return "hadith";
+function cleanReferenceType(value: string) {
+  return value.trim() || "Référence";
 }
 
 export function parseReferences(markdown: string): ParsedReference[] {
   return parseMarkdownTable(markdown, 7)
     .filter((row) => !looksLikeHeader(row))
     .map((row) => ({
-      type: normalizeReferenceType(row[1] ?? ""),
+      type: cleanReferenceType(row[1] ?? ""),
       texteCours: row[2] ?? "",
       texteExact: row[3] ?? "",
       texteArabe: row[4] ?? "",

@@ -1974,6 +1974,11 @@ summary {
   padding: 9px 13px;
 }
 
+.source-manual--textarea {
+  min-height: 82px;
+  resize: vertical;
+}
+
 .source-manual:focus {
   outline: none;
   border-color: var(--gold);

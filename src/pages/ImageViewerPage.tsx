@@ -95,7 +95,10 @@ export function ImageViewerPage() {
         .filter((reference) => reference.valide)
         .map((reference) => {
           const text =
-            reference.choixTexte === "exact" && reference.texteExact
+            reference.choixTexte === "personnalise" &&
+            reference.textePersonnalise
+              ? reference.textePersonnalise
+              : reference.choixTexte === "exact" && reference.texteExact
               ? reference.texteExact
               : reference.texteCours || reference.texteExact;
 

@@ -146,6 +146,7 @@ function referenceFromDoc(doc: QueryDocumentSnapshot<DocumentData>): CourseRefer
     sourceIdentifiee: data.sourceIdentifiee ?? "",
     statutAuto: data.statutAuto,
     choixTexte: data.choixTexte ?? null,
+    textePersonnalise: data.textePersonnalise ?? "",
     choixSource: data.choixSource ?? null,
     valide: data.valide ?? false,
   };
@@ -719,7 +720,8 @@ export async function saveDetectedReferences(input: {
         ),
         {
           ...reference,
-          choixTexte: reference.statutAuto === "paraphrase" ? null : "cours",
+          choixTexte: null,
+          textePersonnalise: "",
           choixSource: null,
           valide: false,
         },
@@ -758,6 +760,7 @@ export async function saveReferenceDecision(input: {
   courseId: string;
   referenceId: string;
   choixTexte: CourseReference["choixTexte"];
+  textePersonnalise: string;
   choixSource: string | null;
 }) {
   await updateDoc(
@@ -774,6 +777,7 @@ export async function saveReferenceDecision(input: {
     ),
     {
       choixTexte: input.choixTexte,
+      textePersonnalise: input.textePersonnalise,
       choixSource: input.choixSource,
       valide: true,
     },
@@ -787,6 +791,7 @@ export async function saveReferenceDecisions(input: {
   decisions: Array<{
     referenceId: string;
     choixTexte: CourseReference["choixTexte"];
+    textePersonnalise: string;
     choixSource: string | null;
   }>;
 }) {

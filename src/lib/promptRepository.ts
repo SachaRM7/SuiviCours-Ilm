@@ -120,7 +120,9 @@ async function getValidatedSources(context: CourseContext) {
     .filter((reference) => reference.valide)
     .map((reference) => {
       const texte =
-        reference.choixTexte === "exact"
+        reference.choixTexte === "personnalise"
+          ? reference.textePersonnalise
+          : reference.choixTexte === "exact"
           ? reference.texteExact
           : reference.texteCours;
       const source = reference.choixSource ?? "";

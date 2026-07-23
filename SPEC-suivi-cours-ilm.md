@@ -92,13 +92,14 @@ La transcription brute (pré-correction) n'est **pas** conservée. Le prompt ima
 Résultat de l'étape sources, après arbitrage utilisateur.
 ```
 {
-  type: "hadith" | "verset" | "parole_savant",
+  type: string,                // libelle conserve depuis la sortie IA
   texteCours: "...",           // formulation entendue en cours
   texteExact: "...",           // texte de la référence identifiée, si différent
   texteArabe: "...",
   sourceIdentifiee: "Al-Tirmidhī n°2398",
   statutAuto: "exacte" | "paraphrase" | "allusion" | "introuvable",
-  choixTexte: "cours" | "exact",       // pour les paraphrases uniquement
+  choixTexte: "cours" | "exact" | "personnalise",
+  textePersonnalise: "...",    // utilise seulement si choixTexte = "personnalise"
   choixSource: "Al-Tirmidhī n°2398" | null,   // null = ne pas inclure
   valide: true
 }

@@ -10,6 +10,7 @@ import type { CourseReference } from "../types/domain";
 
 type DraftDecision = {
   choixTexte: CourseReference["choixTexte"];
+  textePersonnalise: string;
   choixSource?: string | null;
 };
 
@@ -20,34 +21,36 @@ const statusLabel: Record<CourseReference["statutAuto"], string> = {
   introuvable: "Introuvable",
 };
 
-const typeLabel: Record<CourseReference["type"], string> = {
-  hadith: "Hadith",
-  verset: "Verset",
-  parole_savant: "Parole de savant",
-};
-
 function initialDecision(reference: CourseReference): DraftDecision {
   return {
-    choixTexte:
-      reference.choixTexte ??
-      (reference.statutAuto === "paraphrase" ? null : "cours"),
+    choixTexte: reference.choixTexte ?? null,
+    textePersonnalise: reference.textePersonnalise ?? "",
     choixSource: reference.valide ? reference.choixSource : undefined,
   };
 }
 
 function textForDecision(reference: CourseReference, decision: DraftDecision) {
+  if (decision.choixTexte === "personnalise") {
+    return decision.textePersonnalise.trim();
+  }
+
   if (decision.choixTexte === "exact" && reference.texteExact) {
     return reference.texteExact;
   }
 
-  return reference.texteCours || reference.texteExact;
+  if (decision.choixTexte === "cours" && reference.texteCours) {
+    return reference.texteCours;
+  }
+
+  return "";
 }
 
 function isDecisionComplete(reference: CourseReference, decision: DraftDecision) {
-  const textReady =
-    reference.statutAuto !== "paraphrase" || Boolean(decision.choixTexte);
-
-  return textReady && decision.choixSource !== undefined;
+  return (
+    Boolean(decision.choixTexte) &&
+    Boolean(textForDecision(reference, decision)) &&
+    decision.choixSource !== undefined
+  );
 }
 
 function cleanSource(value: string) {
@@ -55,7 +58,9 @@ function cleanSource(value: string) {
 }
 
 function sourceBase(reference: CourseReference) {
-  return cleanSource(reference.sourceIdentifiee.split("—")[0].split("·")[0] ?? "");
+  return cleanSource(
+    reference.sourceIdentifiee.split("—")[0].split("·")[0] ?? "",
+  );
 }
 
 function suggestedSources(reference: CourseReference) {
@@ -64,9 +69,9 @@ function suggestedSources(reference: CourseReference) {
   const options: string[] = [];
 
   if (reference.statutAuto === "allusion" && base) {
-    options.push(`Allusion à ${base}`, base);
+    options.push(`Allusion a ${base}`, base);
   } else if (reference.statutAuto === "introuvable") {
-    options.push("Attribution sans chaîne");
+    options.push(source, "Attribution non retenue");
   } else {
     options.push(source, base);
   }
@@ -76,6 +81,16 @@ function suggestedSources(reference: CourseReference) {
 
 function statusClass(status: CourseReference["statutAuto"]) {
   return `source-badge source-badge--${status}`;
+}
+
+function referenceTypeLabel(type: string) {
+  const legacyLabels: Record<string, string> = {
+    hadith: "Hadith",
+    verset: "Verset",
+    parole_savant: "Parole de savant",
+  };
+
+  return legacyLabels[type] ?? (type.trim() || "Reference");
 }
 
 export function SourceValidationPage() {
@@ -128,7 +143,11 @@ export function SourceValidationPage() {
     setDrafts((current) => ({
       ...current,
       [referenceId]: {
-        ...(decisions[referenceId] ?? { choixTexte: null, choixSource: undefined }),
+        ...(decisions[referenceId] ?? {
+          choixTexte: null,
+          textePersonnalise: "",
+          choixSource: undefined,
+        }),
         ...patch,
       },
     }));
@@ -148,6 +167,7 @@ export function SourceValidationPage() {
         decisions: data.references.map((reference) => ({
           referenceId: reference.id,
           choixTexte: decisions[reference.id].choixTexte,
+          textePersonnalise: decisions[reference.id].textePersonnalise.trim(),
           choixSource: decisions[reference.id].choixSource?.trim() || null,
         })),
       });
@@ -184,12 +204,12 @@ export function SourceValidationPage() {
       </header>
 
       <div className="source-note">
-        Pour chaque référence, choisis ce qui partira vers la fiche et l'image.
-        La source imprimée peut être omise : aucune mention de doute ne descendra.
+        Pour chaque reference, choisis ce qui partira vers la fiche et l'image.
+        La source imprimee peut etre omise : aucune mention de doute ne descendra.
       </div>
 
       <div className="source-progress" aria-label="Progression des validations">
-        <span>Tranchées</span>
+        <span>Tranchees</span>
         <div>
           <i style={{ width: `${progress}%` }} />
         </div>
@@ -200,9 +220,9 @@ export function SourceValidationPage() {
 
       {data.references.length === 0 ? (
         <div className="empty-state">
-          <h2>Aucune référence détectée</h2>
+          <h2>Aucune reference detectee</h2>
           <p>
-            Colle d'abord la sortie de l'étape Sources dans le traitement du
+            Colle d'abord la sortie de l'etape Sources dans le traitement du
             cours.
           </p>
           <Link className="tool" to={`/cours/${data.course.id}/traitement`}>
@@ -222,13 +242,17 @@ export function SourceValidationPage() {
 
         return (
           <article
-            className={isDecisionComplete(reference, decision) ? "source-card settled" : "source-card"}
+            className={
+              isDecisionComplete(reference, decision)
+                ? "source-card settled"
+                : "source-card"
+            }
             key={reference.id}
           >
             <div className="source-card__top">
               <span className="source-num">{index + 1}</span>
               <div>
-                <p className="source-kind">{typeLabel[reference.type]}</p>
+                <p className="source-kind">{referenceTypeLabel(reference.type)}</p>
                 <p className="source-text">{reference.texteCours}</p>
                 {reference.texteArabe ? (
                   <p className="source-ar" lang="ar">
@@ -247,15 +271,15 @@ export function SourceValidationPage() {
                 <dd>{reference.texteExact || "Non fourni"}</dd>
               </div>
               <div>
-                <dt>Source identifiée</dt>
-                <dd>{reference.sourceIdentifiee || "Aucune source sûre"}</dd>
+                <dt>Source identifiee</dt>
+                <dd>{reference.sourceIdentifiee || "Aucune source sure"}</dd>
               </div>
             </dl>
 
-            {reference.statutAuto === "paraphrase" ? (
-              <div className="source-stage">
-                <p>Texte imprimé</p>
-                <div className="source-options">
+            <div className="source-stage">
+              <p>Texte imprime</p>
+              <div className="source-options">
+                {reference.texteExact ? (
                   <button
                     className={
                       decision.choixTexte === "exact" ? "tool on" : "tool"
@@ -267,6 +291,8 @@ export function SourceValidationPage() {
                   >
                     Texte exact
                   </button>
+                ) : null}
+                {reference.texteCours ? (
                   <button
                     className={
                       decision.choixTexte === "cours" ? "tool on" : "tool"
@@ -276,14 +302,37 @@ export function SourceValidationPage() {
                     }
                     type="button"
                   >
-                    Formulation du cours
+                    Phrase du cours
                   </button>
-                </div>
+                ) : null}
+                <button
+                  className={
+                    decision.choixTexte === "personnalise" ? "tool on" : "tool"
+                  }
+                  onClick={() =>
+                    updateDraft(reference.id, { choixTexte: "personnalise" })
+                  }
+                  type="button"
+                >
+                  Personnalise
+                </button>
               </div>
-            ) : null}
+              {decision.choixTexte === "personnalise" ? (
+                <textarea
+                  className="source-manual source-manual--textarea"
+                  onChange={(event) =>
+                    updateDraft(reference.id, {
+                      textePersonnalise: event.target.value,
+                    })
+                  }
+                  placeholder="Saisir le texte qui sera imprime"
+                  value={decision.textePersonnalise}
+                />
+              ) : null}
+            </div>
 
             <div className="source-stage">
-              <p>Source imprimée</p>
+              <p>Source imprimee</p>
               <div className="source-options">
                 {sourceOptions.map((source) => (
                   <button
@@ -316,10 +365,10 @@ export function SourceValidationPage() {
             </div>
 
             <div className="source-output">
-              <span>{textForDecision(reference, decision)}</span>
+              <span>{textForDecision(reference, decision) || "Texte a choisir"}</span>
               <strong>
                 {decision.choixSource === undefined
-                  ? "à trancher"
+                  ? "a trancher"
                   : decision.choixSource || "sans ligne de source"}
               </strong>
             </div>

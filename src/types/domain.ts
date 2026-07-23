@@ -75,13 +75,14 @@ export type ReferenceStatus =
 
 export type CourseReference = {
   id: string;
-  type: "hadith" | "verset" | "parole_savant";
+  type: string;
   texteCours: string;
   texteExact: string;
   texteArabe: string;
   sourceIdentifiee: string;
   statutAuto: ReferenceStatus;
-  choixTexte: "cours" | "exact" | null;
+  choixTexte: "cours" | "exact" | "personnalise" | null;
+  textePersonnalise: string;
   choixSource: string | null;
   valide: boolean;
 };
