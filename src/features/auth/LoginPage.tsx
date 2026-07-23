@@ -15,6 +15,7 @@ export function LoginPage() {
   const redirectTo = state?.from?.pathname ?? "/";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
   if (!loading && user) {
@@ -26,7 +27,7 @@ export function LoginPage() {
     setSubmitting(true);
 
     try {
-      await signIn(email, password);
+      await signIn(email, password, { remember });
     } finally {
       setSubmitting(false);
     }
@@ -62,6 +63,18 @@ export function LoginPage() {
             type="password"
             value={password}
           />
+        </label>
+
+        <label className="remember-field">
+          <input
+            checked={remember}
+            onChange={(event) => setRemember(event.target.checked)}
+            type="checkbox"
+          />
+          <span>
+            <strong>Rester connecté</strong>
+            <small>Conserver l'accès sur cet appareil.</small>
+          </span>
         </label>
 
         {error ? <p className="form-error">{error}</p> : null}

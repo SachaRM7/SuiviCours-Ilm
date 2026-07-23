@@ -335,6 +335,39 @@ summary {
   outline: none;
 }
 
+.remember-field {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 16px;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.remember-field input {
+  width: 17px;
+  height: 17px;
+  margin-top: 2px;
+  accent-color: var(--green);
+}
+
+.remember-field strong,
+.remember-field small {
+  display: block;
+}
+
+.remember-field strong {
+  color: var(--green);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+
+.remember-field small {
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .narrow {
   max-width: 680px;
 }

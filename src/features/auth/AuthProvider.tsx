@@ -1,5 +1,8 @@
 import {
+  browserLocalPersistence,
+  browserSessionPersistence,
   onAuthStateChanged,
+  setPersistence,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   type User,
@@ -27,25 +30,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    setError(null);
-    try {
-      const credential = await signInWithEmailAndPassword(auth, email, password);
-      const allowedUid = import.meta.env.VITE_ALLOWED_UID as string | undefined;
+  const signIn = useCallback(
+    async (
+      email: string,
+      password: string,
+      options: { remember: boolean } = { remember: true },
+    ) => {
+      setError(null);
+      try {
+        await setPersistence(
+          auth,
+          options.remember ? browserLocalPersistence : browserSessionPersistence,
+        );
+        const credential = await signInWithEmailAndPassword(auth, email, password);
+        const allowedUid = import.meta.env.VITE_ALLOWED_UID as string | undefined;
 
-      if (allowedUid && credential.user.uid !== allowedUid) {
-        await firebaseSignOut(auth);
-        throw new Error("Ce compte n'est pas autorisé pour cette application.");
+        if (allowedUid && credential.user.uid !== allowedUid) {
+          await firebaseSignOut(auth);
+          throw new Error("Ce compte n'est pas autorisé pour cette application.");
+        }
+      } catch (reason) {
+        const message =
+          reason instanceof Error
+            ? reason.message
+            : "Connexion impossible pour le moment.";
+        setError(message);
+        throw reason;
       }
-    } catch (reason) {
-      const message =
-        reason instanceof Error
-          ? reason.message
-          : "Connexion impossible pour le moment.";
-      setError(message);
-      throw reason;
-    }
-  }, []);
+    },
+    [],
+  );
 
   const signOut = useCallback(() => firebaseSignOut(auth), []);
 
