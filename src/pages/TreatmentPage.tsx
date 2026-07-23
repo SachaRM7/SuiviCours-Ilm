@@ -365,6 +365,18 @@ export function TreatmentPage() {
     );
   }
 
+  async function handleCopyArtifactContent(artifactContent: string) {
+    setNotice(null);
+    setAiError(null);
+
+    const copied = await copyText(artifactContent);
+    setNotice(
+      copied
+        ? "Contenu enregistre copie."
+        : "La copie automatique est bloquee sur ce navigateur.",
+    );
+  }
+
   async function buildStepPrompt(step: StepDefinition) {
     if (!data) {
       return "";
@@ -729,13 +741,13 @@ export function TreatmentPage() {
                     >
                       Copier le prompt
                     </button>
-                    {sourceArtifact ? (
+                    {sourceArtifact && !state.fait ? (
                       <button
                         className="tool"
                         onClick={() => handleCopySourceContent(step)}
                         type="button"
                       >
-                        Copier le contenu
+                        Copier le support
                       </button>
                     ) : null}
                     <button
@@ -755,6 +767,15 @@ export function TreatmentPage() {
                         {aiStep === step.key
                           ? "Génération..."
                           : "Lancer la génération"}
+                      </button>
+                    ) : null}
+                    {artifact ? (
+                      <button
+                        className="tool"
+                        onClick={() => handleCopyArtifactContent(artifact.contenu)}
+                        type="button"
+                      >
+                        Copier le contenu
                       </button>
                     ) : null}
                     {artifact ? (
