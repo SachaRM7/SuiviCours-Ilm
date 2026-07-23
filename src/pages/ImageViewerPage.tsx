@@ -299,7 +299,7 @@ export function ImageViewerPage() {
       return;
     }
 
-    setNotice(null);
+    setNotice("Preparation de l'image...");
 
     try {
       const { blob, extension, mime } = await imageBlobFromStorage(data.image);
@@ -310,27 +310,63 @@ export function ImageViewerPage() {
         type: mime,
       });
 
-      if (
-        navigator.share &&
-        navigator.canShare?.({ files: [file] })
-      ) {
-        await navigator.share({
-          files: [file],
-          title: data.course.titre || `Cours ${data.course.numero}`,
-        });
-        setNotice("Partage ouvert.");
-        return;
+      const sharePayload: ShareData = {
+        files: [file],
+        title: data.course.titre || `Cours ${data.course.numero}`,
+      };
+      const canSharePayload =
+        typeof navigator.canShare === "function"
+          ? navigator.canShare(sharePayload)
+          : true;
+      const canShareFile = "share" in navigator && canSharePayload;
+
+      if (canShareFile) {
+        try {
+          await navigator.share(sharePayload);
+          setNotice("Partage ouvert.");
+          return;
+        } catch (shareError) {
+          if (
+            shareError instanceof DOMException &&
+            shareError.name === "AbortError"
+          ) {
+            setNotice("Partage annule.");
+            return;
+          }
+        }
+      }
+
+      if ("share" in navigator) {
+        try {
+          await navigator.share({
+            title: data.course.titre || `Cours ${data.course.numero}`,
+            url: data.image.url,
+          });
+          setNotice("Partage ouvert.");
+          return;
+        } catch (shareError) {
+          if (
+            shareError instanceof DOMException &&
+            shareError.name === "AbortError"
+          ) {
+            setNotice("Partage annule.");
+            return;
+          }
+        }
       }
 
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = objectUrl;
       link.download = fileName;
+      link.rel = "noopener";
       document.body.appendChild(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(objectUrl);
-      setNotice("Telechargement lance.");
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 60_000);
+      setNotice(
+        "Telechargement lance. Si rien ne s'ouvre, maintiens l'image puis choisis Enregistrer.",
+      );
     } catch {
       setNotice(
         "Telechargement bloque par le navigateur. Ouvre l'image puis utilise Partager ou Enregistrer l'image.",
