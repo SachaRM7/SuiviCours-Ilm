@@ -340,6 +340,31 @@ export function TreatmentPage() {
     }
   }
 
+  async function handleCopySourceContent(step: StepDefinition) {
+    if (!step.sourceArtifactType || !data) {
+      return;
+    }
+
+    setNotice(null);
+    setAiError(null);
+
+    const sourceArtifact = data.artifacts.find(
+      (item) => item.type === step.sourceArtifactType,
+    );
+
+    if (!sourceArtifact) {
+      setAiError("Le contenu support de cette étape n'est pas encore disponible.");
+      return;
+    }
+
+    const copied = await copyText(sourceArtifact.contenu);
+    setNotice(
+      copied
+        ? "Contenu support copié."
+        : "La copie automatique est bloquée sur ce navigateur.",
+    );
+  }
+
   async function buildStepPrompt(step: StepDefinition) {
     if (!data) {
       return "";
@@ -609,6 +634,9 @@ export function TreatmentPage() {
           const artifact = step.resultArtifactType
             ? data.artifacts.find((item) => item.type === step.resultArtifactType)
             : null;
+          const sourceArtifact = step.sourceArtifactType
+            ? data.artifacts.find((item) => item.type === step.sourceArtifactType)
+            : null;
           const selectedModel = getSelectedAiModel(step);
 
           return (
@@ -701,6 +729,15 @@ export function TreatmentPage() {
                     >
                       Copier le prompt
                     </button>
+                    {sourceArtifact ? (
+                      <button
+                        className="tool"
+                        onClick={() => handleCopySourceContent(step)}
+                        type="button"
+                      >
+                        Copier le contenu
+                      </button>
+                    ) : null}
                     <button
                       className="tool"
                       onClick={() => handleShowPrompt(step)}
