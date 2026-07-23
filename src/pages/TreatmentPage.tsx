@@ -651,6 +651,7 @@ export function TreatmentPage() {
             ? data.artifacts.find((item) => item.type === step.sourceArtifactType)
             : null;
           const selectedModel = getSelectedAiModel(step);
+          const canPrepareStep = !state.fait;
 
           return (
             <article
@@ -699,7 +700,7 @@ export function TreatmentPage() {
                     <strong>Support à joindre</strong>
                     <span>{step.supportHint}</span>
                   </div>
-                  {step.recommendedModelId && !state.fait ? (
+                  {step.recommendedModelId && canPrepareStep ? (
                     <div
                       aria-label={`Modèle IA pour ${step.title}`}
                       className="ai-model-picker"
@@ -735,14 +736,16 @@ export function TreatmentPage() {
                     </div>
                   ) : null}
                   <div className="step-actions">
-                    <button
-                      className="tool"
-                      onClick={() => handleCopyPrompt(step)}
-                      type="button"
-                    >
-                      Copier le prompt
-                    </button>
-                    {sourceArtifact && !state.fait ? (
+                    {canPrepareStep ? (
+                      <button
+                        className="tool"
+                        onClick={() => handleCopyPrompt(step)}
+                        type="button"
+                      >
+                        Copier le prompt
+                      </button>
+                    ) : null}
+                    {sourceArtifact && canPrepareStep ? (
                       <button
                         className="tool"
                         onClick={() => handleCopySourceContent(step)}
@@ -751,14 +754,16 @@ export function TreatmentPage() {
                         Copier le support
                       </button>
                     ) : null}
-                    <button
-                      className="tool"
-                      onClick={() => handleShowPrompt(step)}
-                      type="button"
-                    >
-                      Afficher le prompt
-                    </button>
-                    {selectedModel && !state.fait ? (
+                    {canPrepareStep ? (
+                      <button
+                        className="tool"
+                        onClick={() => handleShowPrompt(step)}
+                        type="button"
+                      >
+                        Afficher le prompt
+                      </button>
+                    ) : null}
+                    {selectedModel && canPrepareStep ? (
                       <button
                         className="tool on"
                         disabled={aiStep === step.key}
