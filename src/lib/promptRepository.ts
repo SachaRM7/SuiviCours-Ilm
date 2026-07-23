@@ -102,7 +102,7 @@ async function getVocabularyForModule(moduleId: string) {
     .join("\n");
 }
 
-async function getValidatedSources(context: CourseContext) {
+export async function getValidatedSources(context: CourseContext) {
   const snapshot = await getDocs(
     collection(
       db,

@@ -18,7 +18,7 @@ import {
   parseReferences,
   parseShortTitle,
 } from "../lib/pipelineParsers";
-import { buildPromptPayload } from "../lib/promptRepository";
+import { buildPromptPayload, getValidatedSources } from "../lib/promptRepository";
 import type {
   ArtifactType,
   Course,
@@ -373,6 +373,27 @@ export function TreatmentPage() {
     setNotice(
       copied
         ? "Contenu enregistre copie."
+        : "La copie automatique est bloquee sur ce navigateur.",
+    );
+  }
+
+  async function handleCopyValidatedSources() {
+    if (!data) {
+      return;
+    }
+
+    setNotice(null);
+    setAiError(null);
+
+    const sources = await getValidatedSources({
+      professor: data.professor,
+      module: data.module,
+      course: data.course,
+    });
+    const copied = await copyText(sources);
+    setNotice(
+      copied
+        ? "Sources validees copiees."
         : "La copie automatique est bloquee sur ce navigateur.",
     );
   }
@@ -748,6 +769,17 @@ export function TreatmentPage() {
                         type="button"
                       >
                         Copier le support
+                      </button>
+                    ) : null}
+                    {(step.key === "fiche" || step.key === "image") &&
+                    data.course.etapes.sources.fait &&
+                    !state.fait ? (
+                      <button
+                        className="tool"
+                        onClick={() => void handleCopyValidatedSources()}
+                        type="button"
+                      >
+                        Copier les sources
                       </button>
                     ) : null}
                     <button
