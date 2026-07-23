@@ -965,7 +965,13 @@ summary {
   gap: 14px;
 }
 
+.thumb-shell {
+  position: relative;
+}
+
 .thumb {
+  display: block;
+  height: 100%;
   overflow: hidden;
   border: 1px solid var(--cream-deep);
   border-radius: var(--radius-card);
@@ -978,6 +984,32 @@ summary {
 .thumb:hover {
   border-color: var(--gold-pale);
   transform: translateY(-2px);
+}
+
+.thumb-delete {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 2;
+  min-height: 34px;
+  border: 1px solid rgba(107, 43, 54, 0.28);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--bordeaux);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 10px;
+  box-shadow: 0 8px 22px rgba(31, 21, 17, 0.12);
+}
+
+.thumb-delete:hover:not(:disabled) {
+  border-color: var(--bordeaux);
+  background: var(--bordeaux);
+  color: var(--white);
+}
+
+.thumb-delete:disabled {
+  opacity: 0.7;
 }
 
 .thumb img,

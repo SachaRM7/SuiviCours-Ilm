@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useAsync } from "../hooks/useAsync";
 import {
+  deleteCourseImage,
   listDocumentsForRayon,
   listImagesForModule,
 } from "../lib/libraryRepository";
@@ -78,7 +79,12 @@ export function DocumentListPage() {
   const config = rayonConfig[rayon] ?? rayonConfig.syntheses;
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<"recent" | "numero">("recent");
+  const [reloadKey, setReloadKey] = useState(0);
+  const [deletingImageId, setDeletingImageId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const load = useCallback(async () => {
+    void reloadKey;
+
     if (!moduleId) {
       return [];
     }
@@ -86,7 +92,7 @@ export function DocumentListPage() {
     return config.images
       ? listImagesForModule(moduleId)
       : listDocumentsForRayon(moduleId, config.type ?? "synthese");
-  }, [config.images, config.type, moduleId]);
+  }, [config.images, config.type, moduleId, reloadKey]);
   const { data, error, loading } = useAsync(load);
 
   const filteredDocuments = useMemo(() => {
@@ -131,6 +137,39 @@ export function DocumentListPage() {
 
   const count = config.images ? images.length : filteredDocuments.length;
 
+  async function handleDeleteImage(item: LibraryImage) {
+    const confirmed = window.confirm(
+      "Supprimer cette fiche image ? L'image et son controle seront retires.",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    const id = `${item.course.id}-${item.image.id}`;
+    setDeletingImageId(id);
+    setNotice(null);
+
+    try {
+      await deleteCourseImage({
+        professorId: item.professor.id,
+        moduleId: item.module.id,
+        courseId: item.course.id,
+        image: item.image,
+      });
+      setNotice("Fiche image supprimee.");
+      setReloadKey((value) => value + 1);
+    } catch (deleteError) {
+      setNotice(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Suppression impossible pour le moment.",
+      );
+    } finally {
+      setDeletingImageId(null);
+    }
+  }
+
   return (
     <section className="stack">
       <div>
@@ -164,6 +203,12 @@ export function DocumentListPage() {
           Par numéro
         </button>
       </div>
+
+      {notice ? (
+        <div aria-live="polite" className="empty-state notice-state">
+          {notice}
+        </div>
+      ) : null}
 
       {loading ? <div className="empty-state">Chargement du rayon...</div> : null}
       {error ? (
@@ -215,12 +260,13 @@ export function DocumentListPage() {
 
       {config.images && images.length > 0 ? (
         <div className="image-grid">
-          {images.map(({ course, image }) => (
-            <Link
-              className="thumb"
-              key={`${course.id}-${image.id}`}
-              to={`/images/${course.id}/${image.id}`}
-            >
+          {images.map((item) => {
+            const { course, image } = item;
+            const id = `${course.id}-${image.id}`;
+
+            return (
+              <div className="thumb-shell" key={id}>
+                <Link className="thumb" to={`/images/${course.id}/${image.id}`}>
               {image.url ? (
                 <img
                   alt={`Fiche image du cours ${course.numero} - ${
@@ -242,8 +288,19 @@ export function DocumentListPage() {
                   {imageVerificationLabel(image)}
                 </em>
               </span>
-            </Link>
-          ))}
+                </Link>
+                <button
+                  aria-label={`Supprimer la fiche image du cours ${course.numero}`}
+                  className="thumb-delete"
+                  disabled={deletingImageId === id}
+                  onClick={() => void handleDeleteImage(item)}
+                  type="button"
+                >
+                  {deletingImageId === id ? "..." : "Suppr."}
+                </button>
+              </div>
+            );
+          })}
         </div>
       ) : null}
     </section>

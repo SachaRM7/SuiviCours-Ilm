@@ -12,7 +12,7 @@ import {
   type DocumentData,
   type QueryDocumentSnapshot,
 } from "firebase/firestore";
-import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+import { deleteObject, getDownloadURL, ref, uploadBytes } from "firebase/storage";
 import { db } from "./firebase";
 import { storage } from "./firebase";
 import type {
@@ -372,6 +372,17 @@ function stepForArtifact(type: ArtifactType): keyof Course["etapes"] {
   return type;
 }
 
+function storagePathFromDownloadUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    const match = parsed.pathname.match(/\/o\/([^/]+)$/);
+
+    return match ? decodeURIComponent(match[1]) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function saveArtifact(input: {
   professorId: string;
   moduleId: string;
@@ -526,6 +537,74 @@ export async function saveCourseImage(input: {
   );
 
   return imageId;
+}
+
+export async function deleteCourseImage(input: {
+  professorId: string;
+  moduleId: string;
+  courseId: string;
+  image: CourseImage;
+}) {
+  const imageRef = doc(
+    db,
+    "professeurs",
+    input.professorId,
+    "modules",
+    input.moduleId,
+    "cours",
+    input.courseId,
+    "images",
+    input.image.id,
+  );
+  const storagePath =
+    input.image.storagePath ?? storagePathFromDownloadUrl(input.image.url);
+
+  if (storagePath) {
+    try {
+      await deleteObject(ref(storage, storagePath));
+    } catch (error) {
+      const code = (error as { code?: string }).code;
+
+      if (code !== "storage/object-not-found") {
+        throw error;
+      }
+    }
+  }
+
+  await deleteDoc(imageRef);
+
+  const remainingImages = await getDocs(
+    collection(
+      db,
+      "professeurs",
+      input.professorId,
+      "modules",
+      input.moduleId,
+      "cours",
+      input.courseId,
+      "images",
+    ),
+  );
+
+  if (remainingImages.empty) {
+    await updateDoc(
+      doc(
+        db,
+        "professeurs",
+        input.professorId,
+        "modules",
+        input.moduleId,
+        "cours",
+        input.courseId,
+      ),
+      {
+        "etapes.image.fait": false,
+        "etapes.image.date": null,
+        "etapes.image.obsolete": false,
+        updatedAt: new Date().toISOString(),
+      },
+    );
+  }
 }
 
 export async function saveCourseImageVerification(input: {
