@@ -29,11 +29,13 @@ service firebase.storage {
     match /professeurs/{professeurId}/modules/{moduleId}/cours/{courseId}/audio/{fileName} {
       allow read: if isAllowedUser();
       allow write: if isAllowedUser() && isAcceptedAudio();
+      allow delete: if isAllowedUser();
     }
 
     match /professeurs/{professeurId}/modules/{moduleId}/cours/{courseId}/images/{fileName} {
       allow read: if isAllowedUser();
       allow write: if isAllowedUser() && isAcceptedImage();
+      allow delete: if isAllowedUser();
     }
 
     match /{path=**} {
