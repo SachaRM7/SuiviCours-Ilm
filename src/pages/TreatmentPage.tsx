@@ -32,6 +32,7 @@ type StepDefinition = {
   promptStep: PromptStep;
   title: string;
   description: string;
+  supportHint: string;
   resultArtifactType?: ArtifactType;
   sourceArtifactType?: ArtifactType;
   unlocksAfter?: StepKey;
@@ -80,6 +81,7 @@ const steps: StepDefinition[] = [
     title: "Transcription",
     description:
       "Transcrire l'audio dans Notebook Gemini, ou marquer fait si tu as déjà la transcription corrigée.",
+    supportHint: "À joindre dans Notebook Gemini : le fichier audio du cours.",
     destination: "Notebook Gemini",
   },
   {
@@ -87,6 +89,8 @@ const steps: StepDefinition[] = [
     promptStep: "correction",
     title: "Correction",
     description: "Nettoyer les termes et produire la transcription corrigée.",
+    supportHint:
+      "À joindre au prompt : la transcription brute produite par Notebook Gemini.",
     resultArtifactType: "transcription_corrigee",
     destination: "IA",
     recommendedModelId: "luna",
@@ -96,6 +100,7 @@ const steps: StepDefinition[] = [
     promptStep: "synthese",
     title: "Synthèse",
     description: "Structurer le cours en document lisible.",
+    supportHint: "À joindre au prompt : la transcription corrigée.",
     resultArtifactType: "synthese",
     sourceArtifactType: "transcription_corrigee",
     unlocksAfter: "correction",
@@ -107,6 +112,7 @@ const steps: StepDefinition[] = [
     promptStep: "sources",
     title: "Sources",
     description: "Identifier les références citées.",
+    supportHint: "À joindre au prompt : la synthèse du cours.",
     sourceArtifactType: "synthese",
     unlocksAfter: "synthese",
     destination: "IA",
@@ -117,6 +123,7 @@ const steps: StepDefinition[] = [
     promptStep: "fiche",
     title: "Fiche de révision",
     description: "Condenser l'essentiel en une page mémorisable.",
+    supportHint: "À joindre au prompt : la synthèse et les sources validées.",
     resultArtifactType: "fiche",
     sourceArtifactType: "synthese",
     unlocksAfter: "sources",
@@ -128,6 +135,7 @@ const steps: StepDefinition[] = [
     promptStep: "prompt_image",
     title: "Fiche image",
     description: "Générer le prompt, déposer l'image, puis vérifier.",
+    supportHint: "À joindre au prompt : la synthèse et les sources validées.",
     resultArtifactType: "prompt_image",
     sourceArtifactType: "synthese",
     unlocksAfter: "sources",
@@ -564,6 +572,10 @@ export function TreatmentPage() {
                 <div className="step-body">
                   <span className="dest-pill">{step.destination}</span>
                   <p>{step.description}</p>
+                  <div className="step-support">
+                    <strong>Support à joindre</strong>
+                    <span>{step.supportHint}</span>
+                  </div>
                   {step.recommendedModelId && !state.fait ? (
                     <div
                       aria-label={`Modèle IA pour ${step.title}`}
