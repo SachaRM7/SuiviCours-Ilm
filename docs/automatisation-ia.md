@@ -24,11 +24,24 @@ Le front utilise la région `europe-west1`, identique à celle de la fonction.
 
 ## Choix des modèles
 
-Les prompts peuvent définir `aiProvider` et `aiModel` depuis `/prompts`.
-À défaut, le pipeline utilise :
+La page `/cours/:id/traitement` propose trois modèles à chaque étape
+automatisable. Le tag `Recommandé` indique le modèle sélectionné par défaut,
+mais il reste possible de choisir un autre modèle avant de lancer la génération.
+
+Les prompts restent administrables depuis `/prompts` pour modifier les consignes.
+Le choix effectif du modèle se fait dans la page de traitement.
+
+Recommandations par défaut :
 
 - correction : `openai` / `gpt-5.6-luna`
 - synthèse : `anthropic` / `claude-sonnet-5-20260715`
 - sources : `anthropic` / `claude-sonnet-5-20260715`
 - fiche : `openai` / `gpt-5.6-luna`
 - prompt image : `openai` / `gpt-5.6-luna`
+
+Options disponibles dans l'interface :
+
+- `GPT-5.6 Luna` : bon choix par défaut pour les étapes régulières et le coût.
+- `Claude Sonnet 5` : recommandé pour les synthèses et l'analyse des sources.
+- `Claude Opus 4.8` : à garder pour les cours très difficiles ou les corrections
+  manuelles exigeantes.

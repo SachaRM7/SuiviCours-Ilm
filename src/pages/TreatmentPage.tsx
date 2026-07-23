@@ -18,7 +18,7 @@ import {
   parseReferences,
   parseShortTitle,
 } from "../lib/pipelineParsers";
-import { buildPromptPayload, getActivePrompt } from "../lib/promptRepository";
+import { buildPromptPayload } from "../lib/promptRepository";
 import type {
   ArtifactType,
   Course,
@@ -36,9 +36,42 @@ type StepDefinition = {
   sourceArtifactType?: ArtifactType;
   unlocksAfter?: StepKey;
   destination: string;
-  aiProvider?: AiProvider;
-  aiModel?: string;
+  recommendedModelId?: AiModelId;
 };
+
+type AiModelId = "luna" | "sonnet" | "opus";
+
+type AiModelOption = {
+  id: AiModelId;
+  label: string;
+  provider: AiProvider;
+  model: string;
+  tone: string;
+};
+
+const aiModelOptions: AiModelOption[] = [
+  {
+    id: "luna",
+    label: "GPT-5.6 Luna",
+    provider: "openai",
+    model: "gpt-5.6-luna",
+    tone: "Rapide, propre, économique",
+  },
+  {
+    id: "sonnet",
+    label: "Claude Sonnet 5",
+    provider: "anthropic",
+    model: "claude-sonnet-5-20260715",
+    tone: "Équilibre qualité/coût",
+  },
+  {
+    id: "opus",
+    label: "Claude Opus 4.8",
+    provider: "anthropic",
+    model: "claude-opus-4-8",
+    tone: "Pour les cas exigeants",
+  },
+];
 
 const steps: StepDefinition[] = [
   {
@@ -55,9 +88,8 @@ const steps: StepDefinition[] = [
     description: "Nettoyer les termes et produire la transcription corrigée.",
     resultArtifactType: "transcription_corrigee",
     unlocksAfter: "transcription",
-    destination: "Claude",
-    aiProvider: "openai",
-    aiModel: "gpt-5.6-luna",
+    destination: "IA",
+    recommendedModelId: "luna",
   },
   {
     key: "synthese",
@@ -67,9 +99,8 @@ const steps: StepDefinition[] = [
     resultArtifactType: "synthese",
     sourceArtifactType: "transcription_corrigee",
     unlocksAfter: "correction",
-    destination: "Claude",
-    aiProvider: "anthropic",
-    aiModel: "claude-sonnet-5-20260715",
+    destination: "IA",
+    recommendedModelId: "sonnet",
   },
   {
     key: "sources",
@@ -78,9 +109,8 @@ const steps: StepDefinition[] = [
     description: "Identifier les références citées.",
     sourceArtifactType: "synthese",
     unlocksAfter: "synthese",
-    destination: "Claude",
-    aiProvider: "anthropic",
-    aiModel: "claude-sonnet-5-20260715",
+    destination: "IA",
+    recommendedModelId: "sonnet",
   },
   {
     key: "fiche",
@@ -90,9 +120,8 @@ const steps: StepDefinition[] = [
     resultArtifactType: "fiche",
     sourceArtifactType: "synthese",
     unlocksAfter: "sources",
-    destination: "Claude",
-    aiProvider: "openai",
-    aiModel: "gpt-5.6-luna",
+    destination: "IA",
+    recommendedModelId: "luna",
   },
   {
     key: "image",
@@ -102,9 +131,8 @@ const steps: StepDefinition[] = [
     resultArtifactType: "prompt_image",
     sourceArtifactType: "synthese",
     unlocksAfter: "sources",
-    destination: "GPT Image",
-    aiProvider: "openai",
-    aiModel: "gpt-5.6-luna",
+    destination: "IA",
+    recommendedModelId: "luna",
   },
 ];
 
@@ -154,6 +182,9 @@ export function TreatmentPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [busyStep, setBusyStep] = useState<StepKey | null>(null);
   const [aiStep, setAiStep] = useState<StepKey | null>(null);
+  const [selectedAiModels, setSelectedAiModels] = useState<
+    Partial<Record<StepKey, AiModelId>>
+  >({});
   const [results, setResults] = useState<Record<StepKey, string>>({
     transcription: "",
     correction: "",
@@ -187,6 +218,15 @@ export function TreatmentPage() {
     const done = steps.filter((step) => data?.course.etapes[step.key].fait).length;
     return { done, total: steps.length };
   }, [data?.course.etapes]);
+
+  function getSelectedAiModel(step: StepDefinition) {
+    if (!step.recommendedModelId) {
+      return null;
+    }
+
+    const modelId = selectedAiModels[step.key] ?? step.recommendedModelId;
+    return aiModelOptions.find((option) => option.id === modelId) ?? null;
+  }
 
   async function handleCopyPrompt(step: StepDefinition) {
     if (!data) {
@@ -226,7 +266,8 @@ export function TreatmentPage() {
   }
 
   async function handleGenerateAi(step: StepDefinition) {
-    if (!data || !step.aiProvider || !step.aiModel) {
+    const selectedModel = getSelectedAiModel(step);
+    if (!data || !selectedModel) {
       return;
     }
 
@@ -235,21 +276,16 @@ export function TreatmentPage() {
 
     try {
       const prompt = await buildStepPrompt(step);
-      const promptTemplate = await getActivePrompt(step.promptStep);
-      const provider = promptTemplate?.aiProvider ?? step.aiProvider;
-      const model = promptTemplate?.aiModel ?? step.aiModel;
-
-      if (!provider || !model) {
-        throw new Error("Aucun modèle IA n'est configuré pour cette étape.");
-      }
 
       const result = await generateWithAi({
-        provider,
-        model,
+        provider: selectedModel.provider,
+        model: selectedModel.model,
         prompt,
       });
       setResults((current) => ({ ...current, [step.key]: result.text }));
-      setNotice(`${step.title} générée avec ${result.model}. Relis puis enregistre.`);
+      setNotice(
+        `${step.title} générée avec ${selectedModel.label}. Relis puis enregistre.`,
+      );
     } finally {
       setAiStep(null);
     }
@@ -452,6 +488,7 @@ export function TreatmentPage() {
           const artifact = step.resultArtifactType
             ? data.artifacts.find((item) => item.type === step.resultArtifactType)
             : null;
+          const selectedModel = getSelectedAiModel(step);
 
           return (
             <article
@@ -496,6 +533,41 @@ export function TreatmentPage() {
                 <div className="step-body">
                   <span className="dest-pill">{step.destination}</span>
                   <p>{step.description}</p>
+                  {step.recommendedModelId && !state.fait ? (
+                    <div
+                      aria-label={`Modèle IA pour ${step.title}`}
+                      className="ai-model-picker"
+                    >
+                      {aiModelOptions.map((option) => {
+                        const selected = selectedModel?.id === option.id;
+                        const recommended = option.id === step.recommendedModelId;
+
+                        return (
+                          <button
+                            aria-pressed={selected}
+                            className={[
+                              "ai-model-card",
+                              selected ? "ai-model-card--selected" : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            key={option.id}
+                            onClick={() =>
+                              setSelectedAiModels((current) => ({
+                                ...current,
+                                [step.key]: option.id,
+                              }))
+                            }
+                            type="button"
+                          >
+                            <strong>{option.label}</strong>
+                            <span>{option.tone}</span>
+                            {recommended ? <em>Recommandé</em> : null}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
                   <div className="step-actions">
                     <button
                       className="tool"
@@ -504,14 +576,16 @@ export function TreatmentPage() {
                     >
                       Copier le prompt
                     </button>
-                    {step.aiProvider && !state.fait ? (
+                    {selectedModel && !state.fait ? (
                       <button
                         className="tool on"
                         disabled={aiStep === step.key}
                         onClick={() => handleGenerateAi(step)}
                         type="button"
                       >
-                        {aiStep === step.key ? "Génération..." : "Générer avec IA"}
+                        {aiStep === step.key
+                          ? "Génération..."
+                          : `Générer avec ${selectedModel.label}`}
                       </button>
                     ) : null}
                     {artifact ? (
