@@ -27,10 +27,13 @@ const crossLinks: Array<{ type: ArtifactType; label: string }> = [
   { type: "prompt_image", label: "Prompt image" },
 ];
 
-const stepByArtifactType: Record<ArtifactType, "synthese" | "fiche" | "transcription" | "image"> = {
+const stepByArtifactType: Record<
+  ArtifactType,
+  "synthese" | "fiche" | "correction" | "image"
+> = {
   synthese: "synthese",
   fiche: "fiche",
-  transcription_corrigee: "transcription",
+  transcription_corrigee: "correction",
   prompt_image: "image",
 };
 

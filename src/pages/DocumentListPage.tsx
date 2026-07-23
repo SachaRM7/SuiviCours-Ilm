@@ -69,7 +69,7 @@ function imageVerificationClass(image: LibraryImage["image"]) {
 const stepByArtifactType: Record<ArtifactType, keyof LibraryDocument["course"]["etapes"]> = {
   synthese: "synthese",
   fiche: "fiche",
-  transcription_corrigee: "transcription",
+  transcription_corrigee: "correction",
   prompt_image: "image",
 };
 

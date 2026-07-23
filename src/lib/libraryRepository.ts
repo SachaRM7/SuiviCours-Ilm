@@ -358,7 +358,7 @@ async function uploadCourseAudio(input: {
 
 function stepForArtifact(type: ArtifactType): keyof Course["etapes"] {
   if (type === "transcription_corrigee") {
-    return "transcription";
+    return "correction";
   }
 
   if (type === "prompt_image") {
