@@ -21,7 +21,6 @@ const shelves: Array<{
   title: string;
   description: string;
   artifactType?: ArtifactType;
-  archive?: boolean;
 }> = [
   {
     key: "syntheses",
@@ -45,7 +44,6 @@ const shelves: Array<{
     title: "Transcriptions",
     description: "Archive · le verbatim corrigé",
     artifactType: "transcription_corrigee",
-    archive: true,
   },
 ];
 
@@ -221,9 +219,7 @@ export function ModulePage() {
           <div className="shelf-grid">
             {shelves.map((shelf) => (
               <Link
-                className={
-                  shelf.archive ? "shelf-card shelf-card--archive" : "shelf-card"
-                }
+                className="shelf-card"
                 key={shelf.key}
                 to={`/modules/${data.module.id}/${shelf.key}`}
               >

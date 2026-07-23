@@ -230,21 +230,12 @@ summary {
     transform 150ms ease;
 }
 
-.shelf-card--archive {
-  background: transparent;
-  border-style: dashed;
-}
-
 .shelf-card__count {
   color: var(--green);
   font-family: "Cormorant Garamond", serif;
   font-size: 38px;
   font-weight: 600;
   line-height: 1;
-}
-
-.shelf-card--archive .shelf-card__count {
-  color: var(--ink-soft);
 }
 
 .shelf-card strong {
