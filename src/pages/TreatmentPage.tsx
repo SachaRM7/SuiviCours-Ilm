@@ -166,7 +166,7 @@ function pastePlaceholder(step: StepDefinition) {
   }
 
   if (step.resultArtifactType) {
-    return "Colle ici le résultat produit...";
+    return "Colle ici le résultat produit…";
   }
 
   return "Cette étape ne conserve pas d'artefact. Tu peux la marquer comme faite.";
@@ -495,7 +495,11 @@ export function TreatmentPage() {
         ) : null}
       </header>
 
-      {notice ? <div className="empty-state notice-state">{notice}</div> : null}
+      {notice ? (
+        <div aria-live="polite" className="empty-state notice-state">
+          {notice}
+        </div>
+      ) : null}
       {aiError ? (
         <div className="empty-state empty-state--alert notice-state" role="alert">
           {aiError}

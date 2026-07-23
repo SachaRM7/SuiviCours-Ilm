@@ -27,10 +27,25 @@ export function ArtifactEditorPage() {
   const { data, error, loading } = useAsync(load);
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
+  const originalContent = data?.artifact?.contenu ?? "";
+  const dirty = content !== originalContent;
 
   useEffect(() => {
     setContent(data?.artifact?.contenu ?? "");
   }, [data?.artifact?.contenu]);
+
+  useEffect(() => {
+    if (!dirty || saving) {
+      return;
+    }
+
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [dirty, saving]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -100,7 +115,16 @@ export function ArtifactEditorPage() {
         </button>
         <button
           className="button"
-          onClick={() => navigate(`/cours/${data.course.id}/${artifactType}`)}
+          onClick={() => {
+            if (
+              dirty &&
+              !window.confirm("Quitter l'éditeur sans enregistrer les modifications ?")
+            ) {
+              return;
+            }
+
+            navigate(`/cours/${data.course.id}/${artifactType}`);
+          }}
           type="button"
         >
           Annuler

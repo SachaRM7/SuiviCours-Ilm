@@ -35,6 +35,13 @@ export function PromptsPage() {
     () => data?.find((prompt) => prompt.id === selectedId) ?? data?.[0] ?? null,
     [data, selectedId],
   );
+  const dirty =
+    Boolean(selected) &&
+    (title !== selected?.titre ||
+      template !== selected?.template ||
+      active !== selected?.actif ||
+      aiProvider !== (selected?.aiProvider ?? "openai") ||
+      aiModel !== (selected?.aiModel ?? ""));
 
   useEffect(() => {
     if (!selected) {
@@ -48,6 +55,31 @@ export function PromptsPage() {
     setAiProvider(selected.aiProvider ?? "openai");
     setAiModel(selected.aiModel ?? "");
   }, [selected]);
+
+  useEffect(() => {
+    if (!dirty || saving) {
+      return;
+    }
+
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [dirty, saving]);
+
+  function selectPrompt(promptId: string) {
+    if (
+      dirty &&
+      promptId !== selected?.id &&
+      !window.confirm("Changer de prompt sans enregistrer les modifications ?")
+    ) {
+      return;
+    }
+
+    setSelectedId(promptId);
+  }
 
   async function copyPrompt() {
     if (!selected) {
@@ -118,7 +150,7 @@ export function PromptsPage() {
                     : "prompt-list__item"
                 }
                 key={prompt.id}
-                onClick={() => setSelectedId(prompt.id)}
+                onClick={() => selectPrompt(prompt.id)}
                 type="button"
               >
                 <strong>{stepLabels[prompt.etape]}</strong>
@@ -183,7 +215,11 @@ export function PromptsPage() {
               />
             </label>
 
-            {notice ? <div className="viewer-notice">{notice}</div> : null}
+            {notice ? (
+              <div aria-live="polite" className="viewer-notice">
+                {notice}
+              </div>
+            ) : null}
 
             <div className="actions-row">
               <button className="button button--primary" disabled={saving}>

@@ -342,7 +342,11 @@ export function ImageViewerPage() {
             </button>
           </div>
 
-          {notice ? <div className="viewer-notice">{notice}</div> : null}
+          {notice ? (
+            <div aria-live="polite" className="viewer-notice">
+              {notice}
+            </div>
+          ) : null}
 
           <div className="viewer-check__modes">
             <button
@@ -395,7 +399,11 @@ export function ImageViewerPage() {
               Déposer l'image
             </Link>
           </div>
-          {notice ? <div className="viewer-notice">{notice}</div> : null}
+          {notice ? (
+            <div aria-live="polite" className="viewer-notice">
+              {notice}
+            </div>
+          ) : null}
         </div>
       )}
 

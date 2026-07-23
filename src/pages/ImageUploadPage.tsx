@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAsync } from "../hooks/useAsync";
 import { getArtifactEditorData, saveCourseImage } from "../lib/libraryRepository";
@@ -17,6 +17,20 @@ export function ImageUploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [prompt, setPrompt] = useState("");
   const [saving, setSaving] = useState(false);
+  const dirty = Boolean(file) || prompt.trim().length > 0;
+
+  useEffect(() => {
+    if (!dirty || saving) {
+      return;
+    }
+
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [dirty, saving]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

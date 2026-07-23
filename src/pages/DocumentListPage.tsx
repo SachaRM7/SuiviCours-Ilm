@@ -141,9 +141,10 @@ export function DocumentListPage() {
       </div>
 
       <input
+        aria-label={`Chercher dans les ${config.title.toLowerCase()}`}
         className="search"
         onChange={(event) => setSearch(event.target.value)}
-        placeholder={`Chercher dans les ${config.title.toLowerCase()}...`}
+        placeholder={`Chercher dans les ${config.title.toLowerCase()}…`}
         value={search}
       />
 

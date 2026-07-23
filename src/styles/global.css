@@ -44,6 +44,22 @@ textarea {
   font: inherit;
 }
 
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--gold) !important;
+  outline-offset: 3px;
+}
+
+button,
+a,
+summary {
+  touch-action: manipulation;
+}
+
 .app-header {
   background: var(--green);
   color: var(--cream);
@@ -1668,7 +1684,7 @@ textarea {
 }
 
 .source-page {
-  padding-bottom: 110px;
+  padding-bottom: calc(120px + env(safe-area-inset-bottom));
 }
 
 .source-note {
@@ -1883,7 +1899,7 @@ textarea {
   border-top: 1px solid var(--cream-deep);
   background: var(--white);
   box-shadow: 0 -4px 20px rgba(24, 53, 45, 0.06);
-  padding: 13px 20px;
+  padding: 13px 20px calc(13px + env(safe-area-inset-bottom));
 }
 
 .button {

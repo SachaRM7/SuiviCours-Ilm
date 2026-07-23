@@ -88,13 +88,14 @@ export function VocabularyPage() {
       </div>
 
       <input
+        aria-label="Chercher dans le vocabulaire"
         className="search"
         onChange={(event) => setSearch(event.target.value)}
-        placeholder="Chercher un terme..."
+        placeholder="Chercher un terme…"
         value={search}
       />
 
-      {loading ? <div className="empty-state">Chargement du vocabulaire...</div> : null}
+      {loading ? <div className="empty-state">Chargement du vocabulaire…</div> : null}
 
       {error ? (
         <div className="empty-state empty-state--alert">
