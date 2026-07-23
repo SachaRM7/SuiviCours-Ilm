@@ -50,6 +50,11 @@ type AiModelOption = {
   tone: string;
 };
 
+type PromptFallback = {
+  title: string;
+  payload: string;
+};
+
 const aiModelOptions: AiModelOption[] = [
   {
     id: "luna",
@@ -184,6 +189,35 @@ function saveLabel(step: StepDefinition) {
   return step.key === "sources" ? "Extraire les références" : "Enregistrer";
 }
 
+async function copyText(value: string) {
+  if (navigator.clipboard && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(value);
+      return true;
+    } catch {
+      // Fall back to a selected textarea for mobile browsers with strict gestures.
+    }
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.top = "0";
+  textarea.style.left = "0";
+  textarea.style.width = "1px";
+  textarea.style.height = "1px";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  textarea.setSelectionRange(0, value.length);
+
+  const copied = document.execCommand("copy");
+  document.body.removeChild(textarea);
+  return copied;
+}
+
 export function TreatmentPage() {
   const navigate = useNavigate();
   const { courseId } = useParams();
@@ -194,6 +228,9 @@ export function TreatmentPage() {
     Partial<Record<StepKey, AiModelId>>
   >({});
   const [aiError, setAiError] = useState<string | null>(null);
+  const [promptFallback, setPromptFallback] = useState<PromptFallback | null>(
+    null,
+  );
   const [results, setResults] = useState<Record<StepKey, string>>({
     transcription: "",
     correction: "",
@@ -243,18 +280,35 @@ export function TreatmentPage() {
     }
 
     setNotice(null);
-    const payload = await buildPromptPayload({
-      context: {
-        professor: data.professor,
-        module: data.module,
-        course: data.course,
-      },
-      artifacts: data.artifacts,
-      etape: step.promptStep,
-      sourceArtifactType: step.sourceArtifactType,
-    });
-    await navigator.clipboard.writeText(payload);
-    setNotice(`Prompt ${step.title.toLowerCase()} copié.`);
+    setAiError(null);
+    setPromptFallback(null);
+
+    try {
+      const payload = await buildPromptPayload({
+        context: {
+          professor: data.professor,
+          module: data.module,
+          course: data.course,
+        },
+        artifacts: data.artifacts,
+        etape: step.promptStep,
+        sourceArtifactType: step.sourceArtifactType,
+      });
+      const copied = await copyText(payload);
+
+      if (copied) {
+        setNotice(`Prompt ${step.title.toLowerCase()} copié.`);
+      } else {
+        setPromptFallback({ title: step.title, payload });
+        setNotice("Prompt prêt. Copie-le depuis le bloc affiché ci-dessous.");
+      }
+    } catch (copyError) {
+      setAiError(
+        copyError instanceof Error
+          ? copyError.message
+          : "Impossible de préparer ce prompt.",
+      );
+    }
   }
 
   async function buildStepPrompt(step: StepDefinition) {
@@ -511,6 +565,35 @@ export function TreatmentPage() {
       {aiError ? (
         <div className="empty-state empty-state--alert notice-state" role="alert">
           {aiError}
+        </div>
+      ) : null}
+      {promptFallback ? (
+        <div className="prompt-fallback">
+          <div className="prompt-fallback__head">
+            <div>
+              <strong>Prompt {promptFallback.title.toLowerCase()} prêt</strong>
+              <span>Si la copie automatique bloque, copie ce contenu.</span>
+            </div>
+            <button
+              className="tool"
+              onClick={async () => {
+                const copied = await copyText(promptFallback.payload);
+                setNotice(
+                  copied
+                    ? "Prompt copié."
+                    : "Sélectionne le texte puis copie-le manuellement.",
+                );
+              }}
+              type="button"
+            >
+              Copier
+            </button>
+          </div>
+          <textarea
+            onFocus={(event) => event.target.select()}
+            readOnly
+            value={promptFallback.payload}
+          />
         </div>
       ) : null}
 
