@@ -15,6 +15,10 @@ npx firebase-tools functions:secrets:set ALLOWED_UID
 
 ## Installation et déploiement
 
+Les fonctions tournent en Node.js 22. Le SDK `firebase-functions` reste épinglé
+sur la dernière version stable disponible, même si Firebase peut signaler une
+préversion plus récente.
+
 ```bash
 npm run functions:install
 npx firebase-tools deploy --only functions
