@@ -1,12 +1,12 @@
-const CACHE_NAME = "suivi-cours-ilm-v2";
+const CACHE_NAME = "suivi-cours-ilm-v3";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/favicon-32.png",
-  "/apple-touch-icon.png",
-  "/icon-192.png",
-  "/icon-512.png",
+  "/favicon-32-v3.png",
+  "/app-icon-180-v3.png",
+  "/app-icon-192-v3.png",
+  "/app-icon-512-v3.png",
 ];
 
 self.addEventListener("install", (event) => {
