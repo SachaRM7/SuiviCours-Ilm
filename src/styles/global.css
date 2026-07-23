@@ -57,7 +57,9 @@ textarea:focus-visible {
 button,
 a,
 summary {
+  -webkit-user-select: none;
   touch-action: manipulation;
+  user-select: none;
 }
 
 .app-header {

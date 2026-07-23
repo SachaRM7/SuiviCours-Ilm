@@ -274,26 +274,54 @@ export function TreatmentPage() {
     return aiModelOptions.find((option) => option.id === modelId) ?? null;
   }
 
-  async function handleCopyPrompt(step: StepDefinition) {
+  async function preparePrompt(step: StepDefinition) {
     if (!data) {
-      return;
+      return null;
     }
 
+    return buildPromptPayload({
+      context: {
+        professor: data.professor,
+        module: data.module,
+        course: data.course,
+      },
+      artifacts: data.artifacts,
+      etape: step.promptStep,
+      sourceArtifactType: step.sourceArtifactType,
+    });
+  }
+
+  async function handleShowPrompt(step: StepDefinition) {
     setNotice(null);
     setAiError(null);
-    setPromptFallback(null);
 
     try {
-      const payload = await buildPromptPayload({
-        context: {
-          professor: data.professor,
-          module: data.module,
-          course: data.course,
-        },
-        artifacts: data.artifacts,
-        etape: step.promptStep,
-        sourceArtifactType: step.sourceArtifactType,
-      });
+      const payload = await preparePrompt(step);
+      if (!payload) {
+        return;
+      }
+
+      setPromptFallback({ title: step.title, payload });
+      setNotice("Prompt affiché ci-dessous.");
+    } catch (copyError) {
+      setAiError(
+        copyError instanceof Error
+          ? copyError.message
+          : "Impossible de préparer ce prompt.",
+      );
+    }
+  }
+
+  async function handleCopyPrompt(step: StepDefinition) {
+    setNotice(null);
+    setAiError(null);
+
+    try {
+      const payload = await preparePrompt(step);
+      if (!payload) {
+        return;
+      }
+
       const copied = await copyText(payload);
 
       if (copied) {
@@ -701,6 +729,13 @@ export function TreatmentPage() {
                       type="button"
                     >
                       Copier le prompt
+                    </button>
+                    <button
+                      className="tool"
+                      onClick={() => handleShowPrompt(step)}
+                      type="button"
+                    >
+                      Afficher le prompt
                     </button>
                     {selectedModel && !state.fait ? (
                       <button
