@@ -15,6 +15,15 @@ const stepLabels: Record<PromptTemplate["etape"], string> = {
   prompt_image: "Prompt image",
 };
 
+const workflowOrder: Record<PromptTemplate["etape"], number> = {
+  transcription: 1,
+  correction: 2,
+  synthese: 3,
+  sources: 4,
+  fiche: 5,
+  prompt_image: 6,
+};
+
 export function PromptsPage() {
   const [reloadKey, setReloadKey] = useState(0);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -31,9 +40,17 @@ export function PromptsPage() {
     return listPromptTemplates();
   }, [reloadKey]);
   const { data, error, loading } = useAsync(load);
+  const prompts = useMemo(
+    () =>
+      [...(data ?? [])].sort(
+        (left, right) => workflowOrder[left.etape] - workflowOrder[right.etape],
+      ),
+    [data],
+  );
   const selected = useMemo(
-    () => data?.find((prompt) => prompt.id === selectedId) ?? data?.[0] ?? null,
-    [data, selectedId],
+    () =>
+      prompts.find((prompt) => prompt.id === selectedId) ?? prompts[0] ?? null,
+    [prompts, selectedId],
   );
   const dirty =
     Boolean(selected) &&
@@ -142,7 +159,7 @@ export function PromptsPage() {
       {selected ? (
         <div className="prompt-admin">
           <aside className="prompt-list" aria-label="Liste des prompts">
-            {(data ?? []).map((prompt) => (
+            {prompts.map((prompt) => (
               <button
                 className={
                   prompt.id === selected.id
