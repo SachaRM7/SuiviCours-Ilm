@@ -216,6 +216,20 @@ export function ModulePage() {
 
       {data ? (
         <>
+          <div className="module-summary">
+            <div>
+              <p className="eyebrow">Ressources du module</p>
+              <h2>{data.module.nom}</h2>
+              <p>
+                {data.courses.length} cours · {pendingCount} à terminer ·{" "}
+                {imageStatus(allImages)}
+              </p>
+            </div>
+            <Link className="todo-link todo-link--dark" to={`/modules/${data.module.id}/a-terminer`}>
+              Continuer
+            </Link>
+          </div>
+
           <div className="shelf-grid">
             {shelves.map((shelf) => (
               <Link
