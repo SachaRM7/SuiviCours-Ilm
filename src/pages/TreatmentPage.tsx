@@ -587,18 +587,28 @@ export function TreatmentPage() {
   }
 
   const active = currentStep(data.course);
+  const progressPercent = Math.round((progress.done / progress.total) * 100);
 
   return (
     <section className="stack treatment-wrap">
-      <header>
-        <h1 className="page-title">
-          {data.course.titre || `Cours ${data.course.numero}`}
-        </h1>
-        <p className="lede">
-          {data.module.nom} · {data.professor.nom} · {progress.done} étape
-          {progress.done > 1 ? "s" : ""} sur {progress.total}
-        </p>
-        <div className="rail">
+      <header className="treatment-hero">
+        <div className="treatment-hero__copy">
+          <span className="eyebrow">Traitement du cours</span>
+          <h1 className="page-title">
+            {data.course.titre || `Cours ${data.course.numero}`}
+          </h1>
+          <p className="lede">
+            {data.module.nom} · {data.professor.nom}
+          </p>
+        </div>
+        <div className="treatment-hero__meter" aria-label="Progression du workflow">
+          <span>{progress.done}/{progress.total}</span>
+          <strong>{progressPercent}%</strong>
+          <small>
+            {active ? `Prochaine étape : ${active.title}` : "Workflow terminé"}
+          </small>
+        </div>
+        <div className="rail" aria-hidden="true">
           {steps.map((step) => (
             <i
               className={
@@ -609,6 +619,7 @@ export function TreatmentPage() {
                     : undefined
               }
               key={step.key}
+              title={step.title}
             />
           ))}
         </div>
@@ -668,7 +679,8 @@ export function TreatmentPage() {
             >
               <div className="step-head">
                 <span className="step-num">{state.fait ? "✓" : index + 1}</span>
-                <span>
+                <span className="step-head__copy">
+                  <em>Étape {index + 1}</em>
                   <strong>{step.title}</strong>
                   <small>
                     {state.fait
@@ -681,7 +693,7 @@ export function TreatmentPage() {
                           }`}
                   </small>
                 </span>
-                <b>
+                <b className="step-status">
                   {state.obsolete
                     ? "Obsolète"
                     : state.fait
