@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getBlob, ref } from "firebase/storage";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { ReviewToggle } from "../components/ReviewToggle";
 import { useAsync } from "../hooks/useAsync";
 import { storage } from "../lib/firebase";
 import {
@@ -464,6 +465,14 @@ export function ImageViewerPage() {
               Télécharger
             </button>
           ) : null}
+          <ReviewToggle
+            compact
+            href={`/images/${data.course.id}/${data.image.id}`}
+            itemId={`${data.course.id}-${data.image.id}`}
+            kind="image"
+            label={`Image - ${data.course.titre || `Cours ${data.course.numero}`}`}
+            meta={`${data.module.nom} · ${data.professor.nom}`}
+          />
         </div>
       </div>
 

@@ -475,7 +475,7 @@ summary {
 
 .home-metrics {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   overflow: hidden;
   border: 1px solid var(--cream-deep);
   border-radius: var(--radius-card);
@@ -507,6 +507,159 @@ summary {
   font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: 16px;
+}
+
+.dashboard-card {
+  overflow: hidden;
+  border: 1px solid var(--cream-deep);
+  border-radius: 14px;
+  background: var(--white);
+  box-shadow: 0 16px 40px rgba(24, 53, 45, 0.05);
+}
+
+.dashboard-card__head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  border-bottom: 1px solid var(--cream-deep);
+  padding: 20px 24px;
+}
+
+.dashboard-card__head > span {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid rgba(14, 107, 117, 0.18);
+  border-radius: 13px;
+  background: #e8f1f1;
+  color: #0e6b75;
+  font-weight: 800;
+}
+
+.dashboard-card h2 {
+  margin: 0;
+  color: var(--green);
+  font-family: var(--font-serif);
+  font-size: 27px;
+  font-weight: 600;
+}
+
+.dashboard-card p {
+  margin: 2px 0 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.dashboard-list {
+  display: grid;
+}
+
+.dashboard-list article,
+.dashboard-list a {
+  display: block;
+  border-bottom: 1px solid var(--cream-deep);
+  color: var(--ink);
+  padding: 16px 24px;
+}
+
+.dashboard-list article:last-child,
+.dashboard-list a:last-child {
+  border-bottom: 0;
+}
+
+.dashboard-list strong,
+.dashboard-list span {
+  display: block;
+}
+
+.dashboard-list strong {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.dashboard-list span {
+  color: var(--ink-soft);
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+
+.review-toggle {
+  width: fit-content;
+}
+
+.review-toggle span {
+  color: inherit;
+  font-weight: 800;
+}
+
+.repair-box {
+  overflow: hidden;
+  border: 1px solid rgba(18, 72, 76, 0.12);
+  border-radius: 14px;
+  background: var(--white);
+  box-shadow: 0 12px 30px rgba(18, 72, 76, 0.04);
+}
+
+.repair-box summary {
+  cursor: pointer;
+  color: var(--green);
+  font-weight: 700;
+  padding: 15px 18px;
+}
+
+.repair-box__body {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid var(--cream-deep);
+  padding: 16px 18px 18px;
+}
+
+.repair-box__body p {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.repair-box textarea {
+  min-height: 104px;
+  resize: vertical;
+  border: 1px dashed var(--gold-pale);
+  border-radius: 10px;
+  background: var(--cream);
+  color: var(--ink);
+  padding: 12px 14px;
+}
+
+.repair-box textarea:focus {
+  border-color: var(--gold);
+  border-style: solid;
+  background: var(--white);
+  outline: none;
+}
+
+.repair-box__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.repair-box__prompt {
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--cream-deep);
+  border-radius: 10px;
+  background: var(--cream);
+  color: var(--ink);
+  font-size: 12.5px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  padding: 14px;
 }
 
 .home-section-head {
@@ -3533,7 +3686,7 @@ summary {
 
 .source-card__top {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-columns: 44px minmax(0, 1fr) auto auto;
   align-items: start;
   gap: 16px;
   padding: 20px 22px 16px;
@@ -3883,11 +4036,16 @@ summary {
   }
 
   .home-metrics {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .home-metrics div {
+    border-bottom: 1px solid var(--cream-deep);
     padding: 17px 13px;
+  }
+
+  .home-metrics div:nth-last-child(-n + 2) {
+    border-bottom: 0;
   }
 
   .home-metrics strong {
@@ -3897,6 +4055,20 @@ summary {
   .home-metrics span {
     font-size: 9.5px;
     letter-spacing: 0.12em;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .dashboard-card__head {
+    align-items: flex-start;
+    padding: 18px;
+  }
+
+  .dashboard-list article,
+  .dashboard-list a {
+    padding: 15px 18px;
   }
 
   .home-section-head {

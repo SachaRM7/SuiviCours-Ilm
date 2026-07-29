@@ -3,6 +3,8 @@ import type { ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import remarkGfm from "remark-gfm";
+import { RepairPromptBox } from "../components/RepairPromptBox";
+import { ReviewToggle } from "../components/ReviewToggle";
 import { useAsync } from "../hooks/useAsync";
 import { downloadMarkdown, printCurrentPageAsPdf } from "../lib/exportLibrary";
 import {
@@ -225,6 +227,15 @@ export function DocumentReadPage() {
             </span>
           </div>
         </div>
+        <ReviewToggle
+          href={`/cours/${document.course.id}/${document.artifact.type}`}
+          itemId={`${document.course.id}-${document.artifact.type}`}
+          kind="artifact"
+          label={`${labelByType[document.artifact.type]} - ${
+            document.course.titre || `Cours ${document.course.numero}`
+          }`}
+          meta={`${document.module.nom} · ${document.professor.nom}`}
+        />
       </header>
 
       {document.course.titre && !document.course.titreValide ? (
@@ -374,6 +385,14 @@ export function DocumentReadPage() {
           ) : null}
         </div>
       ) : null}
+
+      <RepairPromptBox
+        content={document.artifact.contenu}
+        targetLabel={labelByType[document.artifact.type]}
+        title={`${document.module.nom} · Cours ${document.course.numero} · ${
+          document.course.titre || "Sans titre"
+        }`}
+      />
 
       <div className="markdown-body">
         <ReactMarkdown

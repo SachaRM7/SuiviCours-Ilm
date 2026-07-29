@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { RepairPromptBox } from "../components/RepairPromptBox";
+import { ReviewToggle } from "../components/ReviewToggle";
 import { useAsync } from "../hooks/useAsync";
 import {
   getCourseContext,
@@ -121,6 +123,19 @@ function optionLabel(label: string, recommended: boolean) {
       {recommended ? <em className="recommended-tag">Recommande</em> : null}
     </>
   );
+}
+
+function referencesAsText(references: CourseReference[]) {
+  return references
+    .map(
+      (reference, index) => `${index + 1}. ${referenceTypeLabel(reference.type)}
+Texte du cours : ${reference.texteCours || "-"}
+Texte exact : ${reference.texteExact || "-"}
+Arabe : ${reference.texteArabe || "-"}
+Source : ${reference.sourceIdentifiee || "-"}
+Statut : ${statusLabel[reference.statutAuto]}`,
+    )
+    .join("\n\n");
 }
 
 export function SourceValidationPage() {
@@ -254,6 +269,15 @@ export function SourceValidationPage() {
         </strong>
       </div>
 
+      <RepairPromptBox
+        content={referencesAsText(data.references)}
+        context="Cette sortie sert à valider les sources avant génération de la fiche et de l'image. Les recommandations doivent rester prudentes."
+        targetLabel="Sources"
+        title={`${data.module.nom} · Cours ${data.course.numero} · ${
+          data.course.titre || "Sans titre"
+        }`}
+      />
+
       {data.references.length === 0 ? (
         <div className="empty-state">
           <h2>Aucune reference detectee</h2>
@@ -299,6 +323,16 @@ export function SourceValidationPage() {
               <span className={statusClass(reference.statutAuto)}>
                 {statusLabel[reference.statutAuto]}
               </span>
+              <ReviewToggle
+                compact
+                href={`/cours/${data.course.id}/sources`}
+                itemId={`${data.course.id}-${reference.id}`}
+                kind="source"
+                label={`Source ${index + 1} - ${
+                  data.course.titre || `Cours ${data.course.numero}`
+                }`}
+                meta={referenceTypeLabel(reference.type)}
+              />
             </div>
 
             <dl className="source-lines">

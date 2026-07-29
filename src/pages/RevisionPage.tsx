@@ -6,6 +6,12 @@ import {
   listCoursesForModule,
   listProfessorsWithModules,
 } from "../lib/libraryRepository";
+import {
+  clearReviewMark,
+  listReviewMarks,
+  setReviewMark,
+  type ReviewKind,
+} from "../lib/reviewRepository";
 import { listVocabulary } from "../lib/vocabularyRepository";
 import type {
   Course,
@@ -18,6 +24,8 @@ type RevisionCard =
   | {
       id: string;
       kind: "vocabulaire";
+      reviewKind: ReviewKind;
+      reviewItemId: string;
       title: string;
       eyebrow: string;
       front: string;
@@ -28,6 +36,8 @@ type RevisionCard =
   | {
       id: string;
       kind: "fiche";
+      reviewKind: ReviewKind;
+      reviewItemId: string;
       title: string;
       eyebrow: string;
       front: string;
@@ -42,8 +52,6 @@ type FicheContext = {
   course: Course;
   contenu: string;
 };
-
-const REVIEW_STORAGE_KEY = "suivi-cours-ilm.review-marked";
 
 function cleanMarkdown(value: string) {
   return value
@@ -73,10 +81,11 @@ function courseHrefFromOccurrence(entry: VocabularyEntry) {
   return `/cours/${occurrence.coursId}/synthese`;
 }
 
-async function loadRevisionCards(): Promise<RevisionCard[]> {
-  const [vocabulary, professors] = await Promise.all([
+async function loadRevisionCards() {
+  const [vocabulary, professors, reviewMarks] = await Promise.all([
     listVocabulary(),
     listProfessorsWithModules(),
+    listReviewMarks(),
   ]);
 
   const ficheContexts = await Promise.all(
@@ -113,6 +122,8 @@ async function loadRevisionCards(): Promise<RevisionCard[]> {
   const vocabCards: RevisionCard[] = vocabulary.map((entry) => ({
     id: `vocab-${entry.id}`,
     kind: "vocabulaire",
+    reviewKind: "term",
+    reviewItemId: entry.id,
     title: entry.translitteration,
     eyebrow: "Vocabulaire",
     front: entry.arabe
@@ -126,6 +137,8 @@ async function loadRevisionCards(): Promise<RevisionCard[]> {
   const ficheCards: RevisionCard[] = ficheContexts.flat().map((item) => ({
     id: `fiche-${item.course.id}`,
     kind: "fiche",
+    reviewKind: "artifact",
+    reviewItemId: `${item.course.id}-fiche`,
     title: item.course.titre || `Cours ${item.course.numero}`,
     eyebrow: "Fiche",
     front: `${item.module.nom} · Cours ${item.course.numero}`,
@@ -134,23 +147,12 @@ async function loadRevisionCards(): Promise<RevisionCard[]> {
     meta: item.professor.nom,
   }));
 
-  return [...vocabCards, ...ficheCards].sort((left, right) =>
-    left.kind === right.kind ? left.title.localeCompare(right.title, "fr") : 0,
-  );
-}
-
-function readMarkedCards() {
-  try {
-    return new Set<string>(
-      JSON.parse(window.localStorage.getItem(REVIEW_STORAGE_KEY) ?? "[]"),
-    );
-  } catch {
-    return new Set<string>();
-  }
-}
-
-function writeMarkedCards(cards: Set<string>) {
-  window.localStorage.setItem(REVIEW_STORAGE_KEY, JSON.stringify([...cards]));
+  return {
+    cards: [...vocabCards, ...ficheCards].sort((left, right) =>
+      left.kind === right.kind ? left.title.localeCompare(right.title, "fr") : 0,
+    ),
+    reviewMarks,
+  };
 }
 
 export function RevisionPage() {
@@ -161,13 +163,29 @@ export function RevisionPage() {
   );
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
-  const [marked, setMarked] = useState<Set<string>>(() => readMarkedCards());
+  const [localMarked, setLocalMarked] = useState<Set<string>>(new Set());
+  const [localCleared, setLocalCleared] = useState<Set<string>>(new Set());
+  const marked = useMemo(() => {
+    const next = new Set(
+      (data?.reviewMarks ?? [])
+        .map((mark) => `${mark.kind}:${mark.itemId}`)
+        .filter((key) => !localCleared.has(key)),
+    );
+
+    for (const key of localMarked) {
+      next.add(key);
+    }
+
+    return next;
+  }, [data?.reviewMarks, localCleared, localMarked]);
 
   const cards = useMemo(() => {
-    const source = data ?? [];
+    const source = data?.cards ?? [];
 
     if (mode === "aRevoir") {
-      return source.filter((card) => marked.has(card.id));
+      return source.filter((card) =>
+        marked.has(`${card.reviewKind}:${card.reviewItemId}`),
+      );
     }
 
     if (mode === "tout") {
@@ -175,7 +193,7 @@ export function RevisionPage() {
     }
 
     return source.filter((card) => card.kind === mode);
-  }, [data, marked, mode]);
+  }, [data?.cards, marked, mode]);
 
   const current = cards[index] ?? null;
 
@@ -211,17 +229,39 @@ export function RevisionPage() {
     setFlipped(false);
   }
 
-  function toggleMarked(cardId: string) {
-    setMarked((currentMarked) => {
+  async function toggleMarked(card: RevisionCard) {
+    const key = `${card.reviewKind}:${card.reviewItemId}`;
+    const isMarked = marked.has(key);
+
+    if (isMarked) {
+      await clearReviewMark({
+        kind: card.reviewKind,
+        itemId: card.reviewItemId,
+      });
+      setLocalMarked((currentMarked) => {
+        const next = new Set(currentMarked);
+        next.delete(key);
+        return next;
+      });
+      setLocalCleared((currentCleared) => new Set(currentCleared).add(key));
+      return;
+    }
+
+    await setReviewMark({
+      kind: card.reviewKind,
+      itemId: card.reviewItemId,
+      label: card.title,
+      href: card.href ?? "/revision",
+      meta: card.meta,
+    });
+    setLocalMarked((currentMarked) => {
       const next = new Set(currentMarked);
-
-      if (next.has(cardId)) {
-        next.delete(cardId);
-      } else {
-        next.add(cardId);
-      }
-
-      writeMarkedCards(next);
+      next.add(key);
+      return next;
+    });
+    setLocalCleared((currentCleared) => {
+      const next = new Set(currentCleared);
+      next.delete(key);
       return next;
     });
   }
@@ -319,11 +359,17 @@ export function RevisionPage() {
               Précédente
             </button>
             <button
-              className={marked.has(current.id) ? "tool on" : "tool"}
-              onClick={() => toggleMarked(current.id)}
+              className={
+                marked.has(`${current.reviewKind}:${current.reviewItemId}`)
+                  ? "tool on"
+                  : "tool"
+              }
+              onClick={() => void toggleMarked(current)}
               type="button"
             >
-              {marked.has(current.id) ? "Revue" : "À revoir"}
+              {marked.has(`${current.reviewKind}:${current.reviewItemId}`)
+                ? "Revue"
+                : "À revoir"}
             </button>
             <button className="tool" onClick={() => move(1)} type="button">
               Suivante

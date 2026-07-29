@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
+import { ReviewToggle } from "../components/ReviewToggle";
 import { useAsync } from "../hooks/useAsync";
 import {
   getCourseArtifactsByPath,
@@ -232,6 +233,14 @@ export function CourseResourcesPage() {
           Traitement
         </Link>
       </div>
+
+      <ReviewToggle
+        href={`/cours/${data.course.id}/ressources`}
+        itemId={data.course.id}
+        kind="course"
+        label={data.course.titre || `Cours ${data.course.numero}`}
+        meta={`${data.module.nom} · ${data.professor.nom}`}
+      />
 
       <div className="resource-progress-card">
         <div>

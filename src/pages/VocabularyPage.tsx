@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { ReviewToggle } from "../components/ReviewToggle";
 import { useAsync } from "../hooks/useAsync";
 import {
   listVocabulary,
@@ -157,6 +158,14 @@ export function VocabularyPage() {
                 ) : null}
               </div>
               <div className="vocab-tags">
+                <ReviewToggle
+                  compact
+                  href="/vocabulaire"
+                  itemId={entry.id}
+                  kind="term"
+                  label={entry.translitteration}
+                  meta={entry.glose}
+                />
                 {entry.tags.map((tag) => {
                   const href = tagToCourseHref(tag);
 
