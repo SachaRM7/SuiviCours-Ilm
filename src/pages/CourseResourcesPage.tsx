@@ -5,6 +5,7 @@ import {
   getCourseArtifactsByPath,
   getCourseContext,
   getCourseImagesByPath,
+  listCourseReferences,
 } from "../lib/libraryRepository";
 import type { Artifact, ArtifactType, CourseImage, StepKey } from "../types/domain";
 
@@ -83,6 +84,64 @@ function formatDate(value: string) {
   }).format(new Date(value));
 }
 
+function buildChecklist(input: {
+  artifacts: Artifact[];
+  images: CourseImage[];
+  course: { id: string; titreValide: boolean; etapes: Record<StepKey, { fait: boolean; obsolete: boolean }> };
+  references: Awaited<ReturnType<typeof listCourseReferences>>;
+}) {
+  const items: Array<{
+    label: string;
+    detail: string;
+    href: string;
+    done: boolean;
+  }> = [
+    {
+      label: "Transcription corrigée",
+      detail: "Base de tout le workflow",
+      href: `/cours/${input.course.id}/traitement`,
+      done: hasArtifact(input.artifacts, "transcription_corrigee"),
+    },
+    {
+      label: "Synthèse lisible",
+      detail: "Document principal du cours",
+      href: `/cours/${input.course.id}/traitement`,
+      done: hasArtifact(input.artifacts, "synthese") && !input.course.etapes.synthese.obsolete,
+    },
+    {
+      label: "Sources validées",
+      detail: "Texte et source tranchés humainement",
+      href: `/cours/${input.course.id}/sources`,
+      done:
+        input.references.length > 0 &&
+        input.references.every((reference) => reference.valide),
+    },
+    {
+      label: "Fiche de révision",
+      detail: "Support court de mémorisation",
+      href: `/cours/${input.course.id}/traitement`,
+      done: hasArtifact(input.artifacts, "fiche") && !input.course.etapes.fiche.obsolete,
+    },
+    {
+      label: "Image conforme",
+      detail: "Fiche image déposée et contrôlée",
+      href:
+        input.images[0] ? `/images/${input.course.id}/${input.images[0].id}` : `/cours/${input.course.id}/images/new`,
+      done: input.images.some(
+        (image) => image.verification.faite && image.verification.conforme,
+      ),
+    },
+    {
+      label: "Titre confirmé",
+      detail: "Nom propre pour l’archive",
+      href: `/cours/${input.course.id}/synthese`,
+      done: input.course.titreValide,
+    },
+  ];
+
+  return items;
+}
+
 export function CourseResourcesPage() {
   const { courseId } = useParams();
   const load = useCallback(async () => {
@@ -95,7 +154,7 @@ export function CourseResourcesPage() {
       return null;
     }
 
-    const [artifacts, images] = await Promise.all([
+    const [artifacts, images, references] = await Promise.all([
       getCourseArtifactsByPath(
         context.professor.id,
         context.module.id,
@@ -106,9 +165,14 @@ export function CourseResourcesPage() {
         context.module.id,
         context.course.id,
       ),
+      listCourseReferences({
+        professorId: context.professor.id,
+        moduleId: context.module.id,
+        courseId: context.course.id,
+      }),
     ]);
 
-    return { ...context, artifacts, images };
+    return { ...context, artifacts, images, references };
   }, [courseId]);
   const { data, error, loading } = useAsync(load);
   const progress = useMemo(() => {
@@ -123,6 +187,19 @@ export function CourseResourcesPage() {
       total: steps.length,
     };
   }, [data]);
+  const checklist = useMemo(() => {
+    if (!data) {
+      return [];
+    }
+
+    return buildChecklist({
+      artifacts: data.artifacts,
+      images: data.images,
+      course: data.course,
+      references: data.references,
+    });
+  }, [data]);
+  const todoCount = checklist.filter((item) => !item.done).length;
 
   if (loading) {
     return <div className="empty-state">Chargement des ressources...</div>;
@@ -166,6 +243,34 @@ export function CourseResourcesPage() {
         <i>
           <b style={{ width: `${Math.round((progress.done / progress.total) * 100)}%` }} />
         </i>
+      </div>
+
+      <div className="resource-smart-card">
+        <div className="resource-section-title">
+          <span className="resource-section-title__icon">✓</span>
+          <div>
+            <h2>Checklist du cours</h2>
+            <p>
+              {todoCount === 0
+                ? "Tout est prêt pour relire le cours complet."
+                : `${todoCount} point${todoCount > 1 ? "s" : ""} à terminer.`}
+            </p>
+          </div>
+          <em>{todoCount}</em>
+        </div>
+        <div className="smart-checklist">
+          {checklist.map((item) => (
+            <Link
+              className={item.done ? "smart-check smart-check--done" : "smart-check"}
+              key={item.label}
+              to={item.href}
+            >
+              <span>{item.done ? "✓" : "·"}</span>
+              <strong>{item.label}</strong>
+              <small>{item.detail}</small>
+            </Link>
+          ))}
+        </div>
       </div>
 
       <div className="resource-section-title">
@@ -236,6 +341,9 @@ export function CourseResourcesPage() {
           </div>
         </div>
         <div className="resource-actions">
+          <Link className="todo-link" to={`/cours/${data.course.id}/complet`}>
+            Lire le cours complet
+          </Link>
           <Link className="todo-link" to={`/cours/${data.course.id}/traitement`}>
             Continuer le workflow
           </Link>

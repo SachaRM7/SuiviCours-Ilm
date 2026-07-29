@@ -296,6 +296,7 @@ export function DocumentReadPage() {
             <Link to={`/cours/${document.course.id}/${document.artifact.type}/edit`}>
               Modifier
             </Link>
+            <Link to={`/cours/${document.course.id}/complet`}>Cours complet</Link>
             <Link to={`/cours/${document.course.id}/ressources`}>Ressources</Link>
             <Link to={`/cours/${document.course.id}/traitement`}>Traitement</Link>
           </div>
