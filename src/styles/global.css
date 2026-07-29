@@ -1161,11 +1161,67 @@ summary {
   max-width: 680px;
 }
 
+.new-course-page {
+  max-width: 980px;
+}
+
+.new-course-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  align-items: end;
+  gap: 22px;
+  overflow: hidden;
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.92), rgba(249, 244, 239, 0.72)),
+    var(--white);
+  border: 1px solid rgba(18, 72, 76, 0.12);
+  box-shadow: 0 18px 42px rgba(18, 72, 76, 0.06);
+  padding: 26px 28px;
+}
+
+.new-course-hero .lede {
+  max-width: 56ch;
+}
+
+.new-course-hero__badge {
+  display: grid;
+  justify-items: end;
+  border-left: 1px solid var(--cream-deep);
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding-left: 20px;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.new-course-hero__badge strong {
+  color: var(--green);
+  font-family: var(--font-serif);
+  font-size: 64px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 0.9;
+  text-transform: none;
+}
+
 .guess-card {
-  border-radius: var(--radius-card);
-  background: var(--green);
+  overflow: hidden;
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(18, 72, 76, 0.97), rgba(22, 100, 106, 0.92)),
+    var(--green);
   color: var(--cream);
-  padding: 20px 22px;
+  padding: 24px;
+}
+
+.guess-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .guess-card h2 {
@@ -1182,6 +1238,53 @@ summary {
   font-size: 13.5px;
 }
 
+.guess-card__head p:not(.eyebrow) {
+  margin: 0;
+  color: rgba(249, 244, 239, 0.76);
+  font-size: 13.5px;
+}
+
+.guess-card .dest-pill {
+  background: rgba(249, 244, 239, 0.12);
+  color: var(--cream);
+}
+
+.course-plan {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid rgba(249, 244, 239, 0.15);
+  border-radius: 12px;
+  background: rgba(249, 244, 239, 0.12);
+  margin-top: 20px;
+}
+
+.course-plan span {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  background: rgba(18, 72, 76, 0.28);
+  color: rgba(249, 244, 239, 0.62);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 14px;
+  text-transform: uppercase;
+}
+
+.course-plan strong {
+  overflow: hidden;
+  color: var(--cream);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  text-transform: none;
+  white-space: nowrap;
+}
+
 .guess-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1195,9 +1298,34 @@ summary {
 
 .edit-card {
   border: 1px solid var(--cream-deep);
-  border-radius: var(--radius-card);
+  border-radius: 16px;
   background: var(--white);
   padding: 22px;
+}
+
+.new-course-form {
+  display: grid;
+  gap: 22px;
+}
+
+.new-course-form__section {
+  display: grid;
+  gap: 14px;
+  border-bottom: 1px solid var(--cream-deep);
+  padding-bottom: 22px;
+}
+
+.new-course-form__section:last-of-type {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.new-course-form__section h2 {
+  margin: 2px 0 0;
+  color: var(--green);
+  font-family: var(--font-serif);
+  font-size: 29px;
+  font-weight: 600;
 }
 
 .form-grid {
@@ -3439,6 +3567,42 @@ summary {
     right: auto;
     left: 0;
     width: min(280px, 100%);
+  }
+
+  .new-course-hero {
+    grid-template-columns: 1fr;
+    border-radius: 0;
+    margin-inline: -30px;
+    padding: 24px 30px;
+  }
+
+  .new-course-hero__badge {
+    justify-items: start;
+    border-left: 0;
+    border-top: 1px solid var(--cream-deep);
+    padding: 15px 0 0;
+    text-align: left;
+  }
+
+  .guess-card {
+    border-radius: 14px;
+    padding: 20px;
+  }
+
+  .guess-card__head {
+    flex-direction: column;
+  }
+
+  .course-plan {
+    grid-template-columns: 1fr;
+  }
+
+  .course-plan strong {
+    white-space: normal;
+  }
+
+  .new-course-form__section h2 {
+    font-size: 25px;
   }
 
   .viewer-bar {
