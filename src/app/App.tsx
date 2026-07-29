@@ -5,6 +5,7 @@ import { LoginPage } from "../features/auth/LoginPage";
 import { DocumentListPage } from "../pages/DocumentListPage";
 import { DocumentReadPage } from "../pages/DocumentReadPage";
 import { ArtifactEditorPage } from "../pages/ArtifactEditorPage";
+import { CourseResourcesPage } from "../pages/CourseResourcesPage";
 import { HomePage } from "../pages/HomePage";
 import { ImageViewerPage } from "../pages/ImageViewerPage";
 import { ImageUploadPage } from "../pages/ImageUploadPage";
@@ -33,6 +34,7 @@ export function App() {
         <Route path="modules/:moduleId" element={<ModulePage />} />
         <Route path="modules/:moduleId/a-terminer" element={<PendingCoursesPage />} />
         <Route path="modules/:moduleId/:rayon" element={<DocumentListPage />} />
+        <Route path="cours/:courseId/ressources" element={<CourseResourcesPage />} />
         <Route path="cours/:courseId/traitement" element={<TreatmentPage />} />
         <Route path="cours/:courseId/sources" element={<SourceValidationPage />} />
         <Route path="cours/:courseId/:type" element={<DocumentReadPage />} />

@@ -96,7 +96,7 @@ function hasArtifact(artifacts: Artifact[], type: ArtifactType) {
 
 function courseEntryHref(input: { course: Course; artifacts: Artifact[] }) {
   if (hasArtifact(input.artifacts, "synthese")) {
-    return `/cours/${input.course.id}/synthese`;
+    return `/cours/${input.course.id}/ressources`;
   }
 
   return `/cours/${input.course.id}/traitement`;
