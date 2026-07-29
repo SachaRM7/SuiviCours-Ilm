@@ -97,8 +97,9 @@ export function AppShell() {
 
         <div className="side-nav__section">
           <p>L'institut</p>
-          <span>Archive personnelle</span>
-          <span>Sources validées</span>
+          <small>
+            Archive personnelle synchronisée, réservée au compte autorisé.
+          </small>
         </div>
       </aside>
 

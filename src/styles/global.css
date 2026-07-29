@@ -167,8 +167,7 @@ summary {
   text-transform: uppercase;
 }
 
-.side-nav__links a,
-.side-nav__section span {
+.side-nav__links a {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -192,8 +191,14 @@ summary {
   color: var(--gold-pale);
 }
 
-.side-nav__section span {
-  color: rgba(249, 244, 239, 0.45);
+.side-nav__section small {
+  display: block;
+  border-left: 1px solid rgba(217, 198, 168, 0.28);
+  color: rgba(249, 244, 239, 0.46);
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin: 2px 8px 0;
+  padding-left: 13px;
 }
 
 .topbar {
@@ -3213,7 +3218,7 @@ summary {
 }
 
 .prompt-list__item--active {
-  background: var(--green);
+  background: #0e6b75;
   color: var(--cream);
 }
 
@@ -3234,7 +3239,7 @@ summary {
 }
 
 .prompt-list__item--active span {
-  color: var(--gold-pale);
+  color: rgba(249, 244, 239, 0.72);
 }
 
 .prompt-editor {
