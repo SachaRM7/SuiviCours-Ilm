@@ -1972,24 +1972,74 @@ summary {
   color: var(--bordeaux);
 }
 
+.doc-reader {
+  max-width: 1120px;
+}
+
 .doc-head {
-  border-bottom: 1px solid var(--cream-deep);
-  padding-bottom: 18px;
+  display: grid;
+  gap: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(18, 72, 76, 0.12);
+  border-radius: 16px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(249, 244, 239, 0.72)),
+    var(--white);
+  box-shadow: 0 18px 42px rgba(18, 72, 76, 0.06);
+  padding: 22px 26px 24px;
+}
+
+.doc-head__main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 24px;
 }
 
 .doc-head h1 {
   margin: 0;
   color: var(--green);
   font-family: "Cormorant Garamond", serif;
-  font-size: 33px;
+  font-size: clamp(34px, 5vw, 56px);
   font-weight: 600;
-  line-height: 1.15;
+  line-height: 1.05;
+  max-width: 860px;
+  text-wrap: balance;
 }
 
 .doc-head p:last-child {
-  margin: 5px 0 0;
+  margin: 9px 0 0;
   color: var(--ink-soft);
-  font-size: 13px;
+  font-size: 14.5px;
+}
+
+.doc-head__stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(92px, 1fr));
+  gap: 8px;
+}
+
+.doc-head__stats span {
+  display: grid;
+  gap: 4px;
+  min-width: 92px;
+  border-left: 1px solid var(--cream-deep);
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding-left: 14px;
+  text-transform: uppercase;
+}
+
+.doc-head__stats strong {
+  color: var(--green);
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1;
+  text-transform: none;
 }
 
 .title-review {
@@ -2072,6 +2122,10 @@ summary {
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
+  border: 1px solid var(--cream-deep);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 14px;
 }
 
 .doc-tabs {
@@ -2085,13 +2139,24 @@ summary {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid var(--cream-deep);
-  border-radius: var(--radius-pill);
+  min-height: 40px;
+  border: 1px solid rgba(18, 72, 76, 0.1);
+  border-radius: 10px;
   background: var(--white);
   color: var(--ink);
   cursor: pointer;
   font-size: 13px;
-  padding: 7px 15px;
+  padding: 8px 14px;
+  text-decoration: none;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    transform 150ms ease;
+}
+
+.cx:hover {
+  border-color: var(--gold-pale);
+  transform: translateY(-1px);
 }
 
 .cx span {
@@ -2130,7 +2195,8 @@ summary {
   display: inline-flex;
   align-items: center;
   border: 1px solid var(--gold-pale);
-  border-radius: var(--radius-pill);
+  min-height: 40px;
+  border-radius: 10px;
   background: var(--white);
   color: var(--green);
   cursor: pointer;
@@ -2204,10 +2270,15 @@ summary {
 }
 
 .markdown-body {
-  border: 1px solid var(--cream-deep);
-  border-radius: var(--radius-card);
+  overflow-x: auto;
+  border: 1px solid rgba(18, 72, 76, 0.1);
+  border-radius: 16px;
   background: var(--white);
-  padding: 34px 38px;
+  box-shadow: 0 14px 34px rgba(18, 72, 76, 0.045);
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.72;
+  padding: clamp(24px, 4vw, 48px);
 }
 
 .markdown-body h1,
@@ -2219,23 +2290,26 @@ summary {
 }
 
 .markdown-body h1 {
-  font-size: 30px;
-  margin: 0 0 18px;
+  font-size: clamp(32px, 4.8vw, 46px);
+  margin: 0 0 22px;
+  text-wrap: balance;
 }
 
 .markdown-body h2 {
-  font-size: 26px;
-  margin: 30px 0 10px;
+  font-size: clamp(26px, 3.8vw, 34px);
+  margin: 34px 0 12px;
+  text-wrap: balance;
 }
 
 .markdown-body h3 {
   color: var(--green);
-  font-size: 16px;
-  margin: 22px 0 7px;
+  font-size: 17px;
+  margin: 24px 0 8px;
 }
 
 .markdown-body p {
-  margin: 0 0 13px;
+  margin: 0 0 15px;
+  max-width: 74ch;
 }
 
 .markdown-body blockquote {
@@ -3294,12 +3368,50 @@ summary {
     display: none;
   }
 
+  .doc-head {
+    border-radius: 0;
+    margin-inline: -30px;
+    padding: 22px 30px 24px;
+  }
+
+  .doc-head__main,
+  .doc-head__stats {
+    grid-template-columns: 1fr;
+  }
+
+  .doc-head__stats {
+    gap: 0;
+    border-top: 1px solid var(--cream-deep);
+    padding-top: 14px;
+  }
+
+  .doc-head__stats span {
+    border-left: 0;
+    border-bottom: 1px solid var(--cream-deep);
+    padding: 11px 0;
+  }
+
+  .doc-head__stats span:last-child {
+    border-bottom: 0;
+  }
+
   .markdown-body {
     padding: 24px 20px;
   }
 
   .doc-toolbar {
     flex-direction: column;
+    padding: 12px;
+  }
+
+  .doc-tabs {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .cx {
+    width: 100%;
   }
 
   .title-review {

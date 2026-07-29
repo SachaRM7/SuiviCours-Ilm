@@ -146,19 +146,42 @@ export function DocumentReadPage() {
   const { document, artifacts } = data;
   const obsoleteStep = stepByArtifactType[document.artifact.type];
   const isObsolete = document.course.etapes[obsoleteStep].obsolete;
+  const doneSteps = Object.values(document.course.etapes).filter(
+    (step) => step.fait,
+  ).length;
+  const availableArtifacts = crossLinks.filter((link) =>
+    hasArtifact(artifacts, link.type),
+  );
   const missingArtifacts = crossLinks.filter(
     (link) => !hasArtifact(artifacts, link.type),
   );
 
   return (
-    <article className="stack">
+    <article className="stack doc-reader">
       <header className="doc-head">
-        <p className="eyebrow">{labelByType[document.artifact.type]}</p>
-        <h1>{document.course.titre || `Cours ${document.course.numero}`}</h1>
-        <p>
-          {document.module.nom} · Cours {document.course.numero} ·{" "}
-          {document.professor.nom}
-        </p>
+        <Link className="resource-back" to={`/cours/${document.course.id}/ressources`}>
+          ← Ressources du cours
+        </Link>
+        <div className="doc-head__main">
+          <div>
+            <p className="eyebrow">{labelByType[document.artifact.type]}</p>
+            <h1>{document.course.titre || `Cours ${document.course.numero}`}</h1>
+            <p>
+              {document.module.nom} · Cours {document.course.numero} ·{" "}
+              {document.professor.nom}
+            </p>
+          </div>
+          <div className="doc-head__stats" aria-label="État du cours">
+            <span>
+              <strong>{availableArtifacts.length}</strong>
+              ressources
+            </span>
+            <span>
+              <strong>{doneSteps}/6</strong>
+              workflow
+            </span>
+          </div>
+        </div>
       </header>
 
       {document.course.titre && !document.course.titreValide ? (
