@@ -67,6 +67,10 @@ export type Artifact = {
   createdAt: string;
 };
 
+export type ArtifactVersion = Artifact & {
+  restoredFromVersion?: number | null;
+};
+
 export type ReferenceStatus =
   | "exacte"
   | "paraphrase"

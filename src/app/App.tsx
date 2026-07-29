@@ -14,6 +14,7 @@ import { ModulePage } from "../pages/ModulePage";
 import { NewCoursePage } from "../pages/NewCoursePage";
 import { PendingCoursesPage } from "../pages/PendingCoursesPage";
 import { PromptsPage } from "../pages/PromptsPage";
+import { RevisionPage } from "../pages/RevisionPage";
 import { SearchPage } from "../pages/SearchPage";
 import { SourceValidationPage } from "../pages/SourceValidationPage";
 import { TreatmentPage } from "../pages/TreatmentPage";
@@ -45,6 +46,7 @@ export function App() {
         <Route path="images/:courseId/:imageId" element={<ImageViewerPage />} />
         <Route path="nouveau-cours" element={<NewCoursePage />} />
         <Route path="recherche" element={<SearchPage />} />
+        <Route path="revision" element={<RevisionPage />} />
         <Route path="vocabulaire" element={<VocabularyPage />} />
         <Route path="prompts" element={<PromptsPage />} />
       </Route>

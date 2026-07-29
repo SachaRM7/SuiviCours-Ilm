@@ -5,6 +5,7 @@ import { useAuth } from "../features/auth/useAuth";
 const navItems = [
   { to: "/", label: "Accueil", icon: "⌂" },
   { to: "/recherche", label: "Recherche", icon: "⌕" },
+  { to: "/revision", label: "Révision", icon: "◇" },
   { to: "/vocabulaire", label: "Vocabulaire", icon: "◈" },
   { to: "/prompts", label: "Prompts", icon: "¶" },
   { to: "/nouveau-cours", label: "Nouveau", icon: "+" },
@@ -12,6 +13,7 @@ const navItems = [
 
 function activeSection(pathname: string) {
   if (pathname.startsWith("/recherche")) return "Recherche";
+  if (pathname.startsWith("/revision")) return "Révision";
   if (pathname.startsWith("/vocabulaire")) return "Vocabulaire";
   if (pathname.startsWith("/prompts")) return "Prompts";
   if (pathname.startsWith("/nouveau-cours")) return "Nouveau";

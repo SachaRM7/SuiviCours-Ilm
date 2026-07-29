@@ -3,6 +3,7 @@ import ReactMarkdown from "react-markdown";
 import { Link, useParams } from "react-router-dom";
 import remarkGfm from "remark-gfm";
 import { useAsync } from "../hooks/useAsync";
+import { printCurrentPageAsPdf } from "../lib/exportLibrary";
 import {
   getCourseArtifactsByPath,
   getCourseContext,
@@ -141,6 +142,17 @@ export function CourseCompletePage() {
             </span>
           </div>
         </div>
+        <button
+          className="viewer-button viewer-button--primary complete-print"
+          onClick={() =>
+            printCurrentPageAsPdf(
+              `${data.module.nom} - cours ${data.course.numero} - complet`,
+            )
+          }
+          type="button"
+        >
+          Exporter PDF
+        </button>
       </header>
 
       {artifactOrder.map((section) => {

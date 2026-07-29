@@ -17,6 +17,7 @@ import { db } from "./firebase";
 import { storage } from "./firebase";
 import type {
   Artifact,
+  ArtifactVersion,
   ArtifactType,
   Course,
   CourseImage,
@@ -118,6 +119,21 @@ function artifactFromDoc(doc: QueryDocumentSnapshot<DocumentData>): Artifact {
     contenu: data.contenu,
     version: data.version,
     createdAt: data.createdAt,
+  };
+}
+
+function artifactVersionFromDoc(
+  doc: QueryDocumentSnapshot<DocumentData>,
+): ArtifactVersion {
+  const data = doc.data();
+
+  return {
+    id: doc.id,
+    type: data.type,
+    contenu: data.contenu,
+    version: data.version,
+    createdAt: data.createdAt,
+    restoredFromVersion: data.restoredFromVersion ?? null,
   };
 }
 
@@ -391,11 +407,27 @@ export async function saveArtifact(input: {
   contenu: string;
 }) {
   const now = new Date().toISOString();
-  const artifact: Omit<Artifact, "id"> = {
+  const artifactRef = doc(
+    db,
+    "professeurs",
+    input.professorId,
+    "modules",
+    input.moduleId,
+    "cours",
+    input.courseId,
+    "artefacts",
+    input.type,
+  );
+  const previous = await getDoc(artifactRef);
+  const nextVersion = previous.exists()
+    ? ((previous.data().version as number | undefined) ?? 1) + 1
+    : 1;
+  const artifact: Omit<ArtifactVersion, "id"> = {
     type: input.type,
     contenu: input.contenu,
-    version: 1,
+    version: nextVersion,
     createdAt: now,
+    restoredFromVersion: null,
   };
   const step = stepForArtifact(input.type);
   const courseUpdates: Record<string, string | boolean | null> = {
@@ -411,7 +443,9 @@ export async function saveArtifact(input: {
     courseUpdates["etapes.transcription.obsolete"] = false;
   }
 
-  await setDoc(
+  await setDoc(artifactRef, artifact);
+  await setDoc(doc(artifactRef, "versions", `v${nextVersion}`), artifact);
+  await updateDoc(
     doc(
       db,
       "professeurs",
@@ -420,11 +454,81 @@ export async function saveArtifact(input: {
       input.moduleId,
       "cours",
       input.courseId,
-      "artefacts",
-      input.type,
     ),
-    artifact,
+    courseUpdates,
   );
+}
+
+export async function listArtifactVersions(input: {
+  professorId: string;
+  moduleId: string;
+  courseId: string;
+  type: ArtifactType;
+}) {
+  const artifactRef = doc(
+    db,
+    "professeurs",
+    input.professorId,
+    "modules",
+    input.moduleId,
+    "cours",
+    input.courseId,
+    "artefacts",
+    input.type,
+  );
+  const versions = await getDocs(
+    query(collection(artifactRef, "versions"), orderBy("version", "desc")),
+  );
+
+  return versions.docs.map(artifactVersionFromDoc);
+}
+
+export async function restoreArtifactVersion(input: {
+  professorId: string;
+  moduleId: string;
+  courseId: string;
+  type: ArtifactType;
+  version: ArtifactVersion;
+}) {
+  const now = new Date().toISOString();
+  const artifactRef = doc(
+    db,
+    "professeurs",
+    input.professorId,
+    "modules",
+    input.moduleId,
+    "cours",
+    input.courseId,
+    "artefacts",
+    input.type,
+  );
+  const current = await getDoc(artifactRef);
+  const nextVersion = current.exists()
+    ? ((current.data().version as number | undefined) ?? 1) + 1
+    : input.version.version + 1;
+  const restored: Omit<ArtifactVersion, "id"> = {
+    type: input.type,
+    contenu: input.version.contenu,
+    version: nextVersion,
+    createdAt: now,
+    restoredFromVersion: input.version.version,
+  };
+  const step = stepForArtifact(input.type);
+  const courseUpdates: Record<string, string | boolean | null> = {
+    [`etapes.${step}.fait`]: true,
+    [`etapes.${step}.date`]: now,
+    [`etapes.${step}.obsolete`]: false,
+    updatedAt: now,
+  };
+
+  if (input.type === "transcription_corrigee") {
+    courseUpdates["etapes.transcription.fait"] = true;
+    courseUpdates["etapes.transcription.date"] = now;
+    courseUpdates["etapes.transcription.obsolete"] = false;
+  }
+
+  await setDoc(artifactRef, restored);
+  await setDoc(doc(artifactRef, "versions", `v${nextVersion}`), restored);
   await updateDoc(
     doc(
       db,

@@ -4,14 +4,16 @@ import ReactMarkdown from "react-markdown";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import remarkGfm from "remark-gfm";
 import { useAsync } from "../hooks/useAsync";
-import { downloadMarkdown } from "../lib/exportLibrary";
+import { downloadMarkdown, printCurrentPageAsPdf } from "../lib/exportLibrary";
 import {
   confirmCourseTitle,
   discardArtifact,
   getCourseArtifacts,
   getLibraryDocument,
+  listArtifactVersions,
+  restoreArtifactVersion,
 } from "../lib/libraryRepository";
-import type { Artifact, ArtifactType } from "../types/domain";
+import type { Artifact, ArtifactType, ArtifactVersion } from "../types/domain";
 
 const labelByType: Record<ArtifactType, string> = {
   synthese: "Synthèse",
@@ -56,6 +58,7 @@ export function DocumentReadPage() {
   const [titleDraft, setTitleDraft] = useState("");
   const [savingTitle, setSavingTitle] = useState(false);
   const [discarding, setDiscarding] = useState(false);
+  const [restoringVersion, setRestoringVersion] = useState<number | null>(null);
   const load = useCallback(async () => {
     void reloadKey;
     if (!courseId) {
@@ -67,8 +70,16 @@ export function DocumentReadPage() {
       return null;
     }
 
-    const artifacts = await getCourseArtifacts(document);
-    return { document, artifacts };
+    const [artifacts, versions] = await Promise.all([
+      getCourseArtifacts(document),
+      listArtifactVersions({
+        professorId: document.professor.id,
+        moduleId: document.module.id,
+        courseId: document.course.id,
+        type: document.artifact.type,
+      }),
+    ]);
+    return { document, artifacts, versions };
   }, [artifactType, courseId, reloadKey]);
   const { data, error, loading } = useAsync(load);
 
@@ -130,6 +141,34 @@ export function DocumentReadPage() {
     }
   }
 
+  async function restoreVersion(version: ArtifactVersion) {
+    if (!data) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Restaurer la version v${version.version} ? Une nouvelle version sera créée avec ce contenu.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setRestoringVersion(version.version);
+    try {
+      await restoreArtifactVersion({
+        professorId: data.document.professor.id,
+        moduleId: data.document.module.id,
+        courseId: data.document.course.id,
+        type: data.document.artifact.type,
+        version,
+      });
+      setReloadKey((key) => key + 1);
+    } finally {
+      setRestoringVersion(null);
+    }
+  }
+
   if (loading) {
     return <div className="empty-state">Chargement du document...</div>;
   }
@@ -144,6 +183,10 @@ export function DocumentReadPage() {
   }
 
   const { document, artifacts } = data;
+  const versions =
+    data.versions.length > 0
+      ? data.versions
+      : [{ ...document.artifact, restoredFromVersion: null }];
   const obsoleteStep = stepByArtifactType[document.artifact.type];
   const isObsolete = document.course.etapes[obsoleteStep].obsolete;
   const doneSteps = Object.values(document.course.etapes).filter(
@@ -293,6 +336,16 @@ export function DocumentReadPage() {
             >
               Télécharger le .md
             </button>
+            <button
+              onClick={() =>
+                printCurrentPageAsPdf(
+                  `${document.module.nom} - cours ${document.course.numero} - ${labelByType[document.artifact.type]}`,
+                )
+              }
+              type="button"
+            >
+              Exporter PDF
+            </button>
             <Link to={`/cours/${document.course.id}/${document.artifact.type}/edit`}>
               Modifier
             </Link>
@@ -336,6 +389,54 @@ export function DocumentReadPage() {
           {document.artifact.contenu}
         </ReactMarkdown>
       </div>
+
+      <section className="version-panel">
+        <div className="complete-section__head">
+          <div>
+            <p className="eyebrow">Historique</p>
+            <h2>Versions</h2>
+          </div>
+          <span className="version-count">{versions.length}</span>
+        </div>
+        <div className="version-timeline">
+          {versions.map((version) => {
+            const isCurrent = version.version === document.artifact.version;
+
+            return (
+              <article className={isCurrent ? "version-item current" : "version-item"} key={version.id}>
+                <span>v{version.version}</span>
+                <div>
+                  <strong>
+                    {isCurrent ? "Version active" : "Ancienne version"}
+                    {version.restoredFromVersion
+                      ? ` · restaurée depuis v${version.restoredFromVersion}`
+                      : ""}
+                  </strong>
+                  <small>
+                    {new Intl.DateTimeFormat("fr-FR", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    }).format(new Date(version.createdAt))}
+                  </small>
+                </div>
+                {!isCurrent ? (
+                  <button
+                    className="tool"
+                    disabled={restoringVersion === version.version}
+                    onClick={() => restoreVersion(version)}
+                    type="button"
+                  >
+                    {restoringVersion === version.version ? "Restauration..." : "Restaurer"}
+                  </button>
+                ) : null}
+              </article>
+            );
+          })}
+        </div>
+      </section>
     </article>
   );
 }

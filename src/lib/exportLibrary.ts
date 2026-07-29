@@ -56,6 +56,16 @@ export function downloadMarkdown(input: {
   downloadBlob(blob, filename);
 }
 
+export function printCurrentPageAsPdf(title: string) {
+  const previousTitle = document.title;
+  document.title = title;
+  window.print();
+
+  window.setTimeout(() => {
+    document.title = previousTitle;
+  }, 500);
+}
+
 function imageExtension(image: CourseImage) {
   try {
     const path = new URL(image.url).pathname;
