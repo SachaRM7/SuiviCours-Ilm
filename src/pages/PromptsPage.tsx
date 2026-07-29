@@ -135,11 +135,18 @@ export function PromptsPage() {
   }
 
   return (
-    <section className="stack">
-      <div>
-        <h1 className="page-title">Prompts</h1>
-        <p className="lede">Les six modèles utilisés par le pipeline.</p>
-      </div>
+    <section className="stack prompts-page">
+      <header className="library-head">
+        <div>
+          <p className="eyebrow">Pipeline IA</p>
+          <h1 className="page-title">Prompts</h1>
+          <p className="lede">Les six modèles utilisés par le pipeline.</p>
+        </div>
+        <div className="library-count">
+          <strong>{prompts.length}</strong>
+          <span>modèles</span>
+        </div>
+      </header>
 
       {loading ? <div className="empty-state">Chargement des prompts...</div> : null}
 

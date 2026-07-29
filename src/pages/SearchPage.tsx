@@ -144,11 +144,18 @@ export function SearchPage() {
   }, [data, query]);
 
   return (
-    <section className="stack">
-      <div>
-        <h1 className="page-title">Recherche</h1>
-        <p className="lede">Tous les modules, tous les documents, côté client.</p>
-      </div>
+    <section className="stack search-page">
+      <header className="library-head">
+        <div>
+          <p className="eyebrow">Recherche</p>
+          <h1 className="page-title">Retrouver un contenu</h1>
+          <p className="lede">Tous les modules, tous les documents, côté client.</p>
+        </div>
+        <div className="library-count">
+          <strong>{results.length}</strong>
+          <span>résultat{results.length > 1 ? "s" : ""}</span>
+        </div>
+      </header>
 
       <input
         aria-label="Chercher dans tous les contenus"

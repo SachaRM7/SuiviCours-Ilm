@@ -79,13 +79,18 @@ export function VocabularyPage() {
   }
 
   return (
-    <section className="stack">
-      <div>
-        <h1 className="page-title">Vocabulaire</h1>
-        <p className="lede">
-          {filtered.length} terme{filtered.length > 1 ? "s" : ""} · tous modules
-        </p>
-      </div>
+    <section className="stack vocabulary-page">
+      <header className="library-head">
+        <div>
+          <p className="eyebrow">Lexique personnel</p>
+          <h1 className="page-title">Vocabulaire</h1>
+          <p className="lede">Termes récupérés depuis les corrections et synthèses.</p>
+        </div>
+        <div className="library-count">
+          <strong>{filtered.length}</strong>
+          <span>terme{filtered.length > 1 ? "s" : ""}</span>
+        </div>
+      </header>
 
       <input
         aria-label="Chercher dans le vocabulaire"

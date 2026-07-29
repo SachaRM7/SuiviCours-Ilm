@@ -171,37 +171,44 @@ export function DocumentListPage() {
   }
 
   return (
-    <section className="stack">
-      <div>
-        <h1 className="page-title">{config.title}</h1>
-        <p className="lede">
-          {count} document{count > 1 ? "s" : ""} · {config.description}
-        </p>
-      </div>
+    <section className="stack library-rayon">
+      <header className="library-head">
+        <div>
+          <p className="eyebrow">Rayon du module</p>
+          <h1 className="page-title">{config.title}</h1>
+          <p className="lede">{config.description}</p>
+        </div>
+        <div className="library-count">
+          <strong>{count}</strong>
+          <span>document{count > 1 ? "s" : ""}</span>
+        </div>
+      </header>
 
-      <input
-        aria-label={`Chercher dans les ${config.title.toLowerCase()}`}
-        className="search"
-        onChange={(event) => setSearch(event.target.value)}
-        placeholder={`Chercher dans les ${config.title.toLowerCase()}…`}
-        value={search}
-      />
+      <div className="library-controls">
+        <input
+          aria-label={`Chercher dans les ${config.title.toLowerCase()}`}
+          className="search"
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder={`Chercher dans les ${config.title.toLowerCase()}…`}
+          value={search}
+        />
 
-      <div className="tools">
-        <button
-          className={sort === "recent" ? "tool on" : "tool"}
-          onClick={() => setSort("recent")}
-          type="button"
-        >
-          Récents d'abord
-        </button>
-        <button
-          className={sort === "numero" ? "tool on" : "tool"}
-          onClick={() => setSort("numero")}
-          type="button"
-        >
-          Par numéro
-        </button>
+        <div className="tools">
+          <button
+            className={sort === "recent" ? "tool on" : "tool"}
+            onClick={() => setSort("recent")}
+            type="button"
+          >
+            Récents d'abord
+          </button>
+          <button
+            className={sort === "numero" ? "tool on" : "tool"}
+            onClick={() => setSort("numero")}
+            type="button"
+          >
+            Par numéro
+          </button>
+        </div>
       </div>
 
       {notice ? (

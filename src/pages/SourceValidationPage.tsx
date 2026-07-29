@@ -223,14 +223,20 @@ export function SourceValidationPage() {
 
   return (
     <section className="stack source-page">
-      <header>
-        <p className="eyebrow">Validation des sources</p>
-        <h1 className="page-title">
-          {data.course.titre || `Cours ${data.course.numero}`}
-        </h1>
-        <p className="lede">
-          {data.module.nom} · Cours {data.course.numero} · {data.professor.nom}
-        </p>
+      <header className="library-head">
+        <div>
+          <p className="eyebrow">Validation des sources</p>
+          <h1 className="page-title">
+            {data.course.titre || `Cours ${data.course.numero}`}
+          </h1>
+          <p className="lede">
+            {data.module.nom} · Cours {data.course.numero} · {data.professor.nom}
+          </p>
+        </div>
+        <div className="library-count">
+          <strong>{settledCount}/{total}</strong>
+          <span>validées</span>
+        </div>
       </header>
 
       <div className="source-note">

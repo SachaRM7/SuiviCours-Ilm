@@ -83,13 +83,20 @@ export function ArtifactEditorPage() {
   }
 
   return (
-    <form className="stack" onSubmit={handleSubmit}>
-      <div>
-        <h1 className="page-title">{labels[artifactType]}</h1>
-        <p className="lede">
-          {data.module.nom} · Cours {data.course.numero} · édition markdown
-        </p>
-      </div>
+    <form className="stack editor-page" onSubmit={handleSubmit}>
+      <header className="library-head">
+        <div>
+          <p className="eyebrow">Édition markdown</p>
+          <h1 className="page-title">{labels[artifactType]}</h1>
+          <p className="lede">
+            {data.module.nom} · Cours {data.course.numero} · aperçu en direct
+          </p>
+        </div>
+        <div className="library-count">
+          <strong>{dirty ? "•" : "✓"}</strong>
+          <span>{dirty ? "modifié" : "stable"}</span>
+        </div>
+      </header>
 
       <div className="editor-grid">
         <label className="editor-pane">
