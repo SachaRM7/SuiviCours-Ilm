@@ -10,18 +10,13 @@ import {
   getCourseImagesByPath,
   listCourseReferences,
 } from "../lib/libraryRepository";
-import type { Artifact, ArtifactType, CourseReference } from "../types/domain";
+import type { Artifact, ArtifactType, CourseReference, StepKey } from "../types/domain";
 
-const artifactOrder: Array<{
+const readingArtifacts: Array<{
   type: ArtifactType;
   title: string;
   eyebrow: string;
 }> = [
-  {
-    type: "transcription_corrigee",
-    title: "Transcription corrigée",
-    eyebrow: "Archive",
-  },
   {
     type: "synthese",
     title: "Synthèse",
@@ -32,11 +27,20 @@ const artifactOrder: Array<{
     title: "Fiche de révision",
     eyebrow: "Mémorisation",
   },
-  {
-    type: "prompt_image",
-    title: "Prompt image",
-    eyebrow: "Génération visuelle",
-  },
+];
+
+const archiveArtifacts: Array<{ type: ArtifactType; title: string }> = [
+  { type: "transcription_corrigee", title: "Transcription corrigée" },
+  { type: "prompt_image", title: "Prompt image" },
+];
+
+const workflowOrder: Array<{ key: StepKey; label: string }> = [
+  { key: "transcription", label: "Transcription" },
+  { key: "correction", label: "Correction" },
+  { key: "synthese", label: "Synthèse" },
+  { key: "sources", label: "Sources" },
+  { key: "fiche", label: "Fiche de révision" },
+  { key: "image", label: "Fiche image" },
 ];
 
 function isMostlyArabic(children: ReactNode) {
@@ -100,32 +104,41 @@ export function CourseCompletePage() {
   const { data, error, loading } = useAsync(load);
 
   if (loading) {
-    return <div className="empty-state">Chargement du cours complet...</div>;
+    return <div className="empty-state">Chargement du cours…</div>;
   }
 
   if (error || !data) {
     return (
       <div className="empty-state empty-state--alert">
         <h2>Cours introuvable</h2>
-        <p>{error ?? "Impossible d'ouvrir le cours complet."}</p>
+        <p>{error ?? "Impossible d'ouvrir ce cours."}</p>
       </div>
     );
   }
 
   const validatedReferences = data.references.filter((reference) => reference.valide);
-  const availableSections = artifactOrder.filter(({ type }) =>
-    artifactByType(data.artifacts, type),
+  const workflowDone = workflowOrder.filter(
+    (item) => data.course.etapes[item.key].fait && !data.course.etapes[item.key].obsolete,
   ).length;
+  const unresolvedReferences = data.references.some((reference) => !reference.valide);
+  const nextWorkflowStep = workflowOrder.find(
+    (item) => !data.course.etapes[item.key].fait || data.course.etapes[item.key].obsolete,
+  );
+  const nextAction = unresolvedReferences
+    ? { label: "Valider les sources", href: `/cours/${data.course.id}/sources` }
+    : nextWorkflowStep
+      ? { label: `Continuer : ${nextWorkflowStep.label}`, href: `/cours/${data.course.id}/traitement` }
+      : null;
 
   return (
     <article className="stack complete-course">
       <header className="complete-hero">
-        <Link className="resource-back" to={`/cours/${data.course.id}/ressources`}>
-          ← Ressources
+        <Link className="resource-back" to={`/modules/${data.module.id}`}>
+          ← {data.module.nom}
         </Link>
         <div className="complete-hero__main">
           <div>
-            <p className="eyebrow">Cours complet</p>
+            <p className="eyebrow">Cours</p>
             <h1>{data.course.titre || `Cours ${data.course.numero}`}</h1>
             <p>
               {data.module.nom} · Cours {data.course.numero} · {data.professor.nom}
@@ -133,8 +146,8 @@ export function CourseCompletePage() {
           </div>
           <div className="doc-head__stats">
             <span>
-              <strong>{availableSections}</strong>
-              documents
+              <strong>{workflowDone}/6</strong>
+              traitement
             </span>
             <span>
               <strong>{data.images.length}</strong>
@@ -142,20 +155,34 @@ export function CourseCompletePage() {
             </span>
           </div>
         </div>
-        <button
-          className="viewer-button viewer-button--primary complete-print"
-          onClick={() =>
-            printCurrentPageAsPdf(
-              `${data.module.nom} - cours ${data.course.numero} - complet`,
-            )
-          }
-          type="button"
-        >
-          Exporter PDF
-        </button>
+        <div className="complete-hero__actions">
+          {nextAction ? <Link className="viewer-button viewer-button--primary" to={nextAction.href}>{nextAction.label}</Link> : null}
+          <button
+            className="viewer-button complete-print"
+            onClick={() => printCurrentPageAsPdf(`${data.module.nom} - cours ${data.course.numero} - complet`)}
+            type="button"
+          >
+            Exporter PDF
+          </button>
+        </div>
       </header>
 
-      {artifactOrder.map((section) => {
+      {nextAction ? (
+        <div className="course-next-action">
+          <div>
+            <p className="eyebrow">À poursuivre</p>
+            <strong>{nextAction.label.replace("Continuer : ", "")}</strong>
+            <span>Une seule action est nécessaire pour faire avancer ce cours.</span>
+          </div>
+          <Link className="tool on" to={nextAction.href}>{nextAction.label}</Link>
+        </div>
+      ) : (
+        <div className="course-next-action course-next-action--complete">
+          <div><p className="eyebrow">Cours terminé</p><strong>Prêt à lire, réviser et archiver.</strong></div>
+        </div>
+      )}
+
+      {readingArtifacts.map((section) => {
         const artifact = artifactByType(data.artifacts, section.type);
 
         if (!artifact) {
@@ -242,6 +269,19 @@ export function CourseCompletePage() {
             ))}
           </div>
         </section>
+      ) : null}
+
+      {archiveArtifacts.some(({ type }) => artifactByType(data.artifacts, type)) ? (
+        <details className="course-archive">
+          <summary>Archives et éléments de production</summary>
+          <div>
+            {archiveArtifacts.map((section) => {
+              const artifact = artifactByType(data.artifacts, section.type);
+              if (!artifact) return null;
+              return <Link key={section.type} to={`/cours/${data.course.id}/${section.type}`}>{section.title}</Link>;
+            })}
+          </div>
+        </details>
       ) : null}
     </article>
   );

@@ -366,18 +366,6 @@ export function TreatmentPage() {
     );
   }
 
-  async function handleCopyArtifactContent(artifactContent: string) {
-    setNotice(null);
-    setAiError(null);
-
-    const copied = await copyText(artifactContent);
-    setNotice(
-      copied
-        ? "Contenu enregistre copie."
-        : "La copie automatique est bloquee sur ce navigateur.",
-    );
-  }
-
   async function buildStepPrompt(step: StepDefinition) {
     if (!data) {
       return "";
@@ -593,6 +581,9 @@ export function TreatmentPage() {
     <section className="stack treatment-wrap">
       <header className="treatment-hero">
         <div className="treatment-hero__copy">
+          <Link className="treatment-back" to={`/cours/${data.course.id}`}>
+            ← Retour au cours
+          </Link>
           <span className="eyebrow">Traitement du cours</span>
           <h1 className="page-title">
             {data.course.titre || `Cours ${data.course.numero}`}
@@ -652,9 +643,7 @@ export function TreatmentPage() {
           const isActive = active?.key === step.key;
           const directCorrection =
             step.key === "correction" && !state.fait && !data.course.etapes.transcription.fait;
-          const showBody =
-            (isActive || state.fait || state.obsolete || directCorrection) &&
-            unlocked;
+          const showBody = (isActive || state.obsolete || directCorrection) && unlocked;
           const artifact = step.resultArtifactType
             ? data.artifacts.find((item) => item.type === step.resultArtifactType)
             : null;
@@ -703,6 +692,29 @@ export function TreatmentPage() {
                         : "Verrouillé"}
                 </b>
               </div>
+
+              {state.fait && !state.obsolete ? (
+                <div className="step-complete-actions">
+                  {artifact ? (
+                    <Link className="text-link" to={`/cours/${data.course.id}/${artifact.type}`}>
+                      Voir le résultat
+                    </Link>
+                  ) : null}
+                  {step.key === "sources" ? (
+                    <Link className="text-link" to={`/cours/${data.course.id}/sources`}>
+                      Valider les sources
+                    </Link>
+                  ) : null}
+                  <button
+                    className="text-link text-link--button"
+                    disabled={busyStep === step.key}
+                    onClick={() => handleRestart(step.key)}
+                    type="button"
+                  >
+                    {busyStep === step.key ? "Relance…" : "Relancer"}
+                  </button>
+                </div>
+              ) : null}
 
               {showBody ? (
                 <div className="step-body">
@@ -787,23 +799,6 @@ export function TreatmentPage() {
                           : "Lancer la génération"}
                       </button>
                     ) : null}
-                    {artifact ? (
-                      <button
-                        className="tool"
-                        onClick={() => handleCopyArtifactContent(artifact.contenu)}
-                        type="button"
-                      >
-                        Copier le contenu
-                      </button>
-                    ) : null}
-                    {artifact ? (
-                      <Link
-                        className="tool"
-                        to={`/cours/${data.course.id}/${artifact.type}`}
-                      >
-                        Voir le contenu
-                      </Link>
-                    ) : null}
                     {step.resultArtifactType ? (
                       <Link
                         className="tool"
@@ -819,21 +814,6 @@ export function TreatmentPage() {
                       >
                         Déposer l'image
                       </Link>
-                    ) : null}
-                    {step.key === "sources" && state.fait ? (
-                      <Link className="tool" to={`/cours/${data.course.id}/sources`}>
-                        Valider les sources
-                      </Link>
-                    ) : null}
-                    {state.fait ? (
-                      <button
-                        className="tool danger"
-                        disabled={busyStep === step.key}
-                        onClick={() => handleRestart(step.key)}
-                        type="button"
-                      >
-                        {busyStep === step.key ? "Relance..." : "Relancer l'étape"}
-                      </button>
                     ) : null}
                   </div>
                   {promptFallback?.stepKey === step.key ? (
@@ -896,8 +876,8 @@ export function TreatmentPage() {
         })}
       </div>
 
-      <Link className="todo-link" to={`/cours/${data.course.id}/synthese`}>
-        Voir le cours
+      <Link className="todo-link" to={`/cours/${data.course.id}`}>
+        Retour au cours
       </Link>
     </section>
   );

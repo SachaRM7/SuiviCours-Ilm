@@ -4,22 +4,21 @@ import { useAuth } from "../features/auth/useAuth";
 
 const navItems = [
   { to: "/", label: "Accueil", icon: "⌂" },
+  { to: "/cours", label: "Cours", icon: "▤" },
+  { to: "/revision", label: "Réviser", icon: "◇" },
   { to: "/recherche", label: "Recherche", icon: "⌕" },
-  { to: "/revision", label: "Révision", icon: "◇" },
-  { to: "/vocabulaire", label: "Vocabulaire", icon: "◈" },
-  { to: "/prompts", label: "Prompts", icon: "¶" },
-  { to: "/nouveau-cours", label: "Nouveau", icon: "+" },
 ];
 
 function activeSection(pathname: string) {
   if (pathname.startsWith("/recherche")) return "Recherche";
   if (pathname.startsWith("/revision")) return "Révision";
-  if (pathname.startsWith("/vocabulaire")) return "Vocabulaire";
-  if (pathname.startsWith("/prompts")) return "Prompts";
-  if (pathname.startsWith("/nouveau-cours")) return "Nouveau";
+  if (pathname.startsWith("/vocabulaire")) return "Réviser";
+  if (pathname.startsWith("/prompts")) return "Gestion";
+  if (pathname.startsWith("/nouveau-cours")) return "Nouveau cours";
+  if (pathname === "/cours") return "Cours";
   if (pathname.startsWith("/modules")) return "Mes cours";
   if (pathname.startsWith("/cours") || pathname.startsWith("/images")) {
-    return "Ressources";
+    return "Cours";
   }
 
   return "Accueil";
@@ -97,6 +96,18 @@ export function AppShell() {
           ))}
         </nav>
 
+        <nav className="side-nav__links side-nav__links--secondary" aria-label="Gestion">
+          <p>Gestion</p>
+          <NavLink to="/vocabulaire">
+            <span>◈</span>
+            Vocabulaire
+          </NavLink>
+          <NavLink to="/prompts">
+            <span>¶</span>
+            Prompts
+          </NavLink>
+        </nav>
+
         <div className="side-nav__section">
           <p>L'institut</p>
           <small>
@@ -134,6 +145,10 @@ export function AppShell() {
             </NavLink>
           ))}
         </nav>
+
+        <NavLink className="mobile-create" to="/nouveau-cours" aria-label="Ajouter un cours">
+          +
+        </NavLink>
 
         <main className="page-wrap">
           <Outlet />

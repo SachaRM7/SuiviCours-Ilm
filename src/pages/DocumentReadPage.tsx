@@ -204,8 +204,8 @@ export function DocumentReadPage() {
   return (
     <article className="stack doc-reader">
       <header className="doc-head">
-        <Link className="resource-back" to={`/cours/${document.course.id}/ressources`}>
-          ← Ressources du cours
+        <Link className="resource-back" to={`/cours/${document.course.id}`}>
+          ← Retour au cours
         </Link>
         <div className="doc-head__main">
           <div>
@@ -360,9 +360,6 @@ export function DocumentReadPage() {
             <Link to={`/cours/${document.course.id}/${document.artifact.type}/edit`}>
               Modifier
             </Link>
-            <Link to={`/cours/${document.course.id}/complet`}>Cours complet</Link>
-            <Link to={`/cours/${document.course.id}/ressources`}>Ressources</Link>
-            <Link to={`/cours/${document.course.id}/traitement`}>Traitement</Link>
           </div>
         </details>
       </div>
