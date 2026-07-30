@@ -4088,6 +4088,59 @@ summary {
   background: rgba(255, 255, 255, 0.58);
 }
 
+.course-reader-tabs {
+  position: sticky;
+  z-index: 4;
+  top: 84px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;
+  border-top: 1px solid var(--cream-deep);
+  border-bottom: 1px solid var(--cream-deep);
+  background: rgba(249, 244, 239, 0.96);
+  box-shadow: 0 7px 14px rgba(42, 38, 34, 0.035);
+  padding: 8px 0;
+  scrollbar-width: none;
+}
+
+.course-reader-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.course-reader-tab {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 7px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 9px 12px;
+}
+
+.course-reader-tab:hover,
+.course-reader-tab.active {
+  background: #e3ece9;
+  color: var(--green);
+}
+
+.course-reader-tab i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #0e6b75;
+}
+
+.course-reader-tab--all {
+  margin-left: auto;
+  color: #0e6b75;
+}
+
 .treatment-back {
   color: rgba(249, 244, 239, 0.78);
   font-size: 13px;
@@ -4218,6 +4271,17 @@ summary {
 
   .step-complete-actions {
     padding-left: 18px;
+  }
+
+  .course-reader-tabs {
+    top: calc(62px + env(safe-area-inset-top));
+    margin-inline: -24px;
+    padding-inline: 18px;
+  }
+
+  .course-reader-tab {
+    font-size: 12px;
+    padding: 8px 10px;
   }
 
   .page-wrap {

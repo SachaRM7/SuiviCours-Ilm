@@ -1,6 +1,6 @@
 import { useCallback, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import remarkGfm from "remark-gfm";
 import { useAsync } from "../hooks/useAsync";
 import { printCurrentPageAsPdf } from "../lib/exportLibrary";
@@ -43,6 +43,15 @@ const workflowOrder: Array<{ key: StepKey; label: string }> = [
   { key: "image", label: "Fiche image" },
 ];
 
+type ReaderView = "synthese" | "fiche" | "sources" | "images" | "tout";
+
+const readerTabs: Array<{ key: Exclude<ReaderView, "tout">; label: string }> = [
+  { key: "synthese", label: "Synthèse" },
+  { key: "fiche", label: "Fiche" },
+  { key: "sources", label: "Sources" },
+  { key: "images", label: "Image" },
+];
+
 function isMostlyArabic(children: ReactNode) {
   const text = String(children);
   const arabic = text.match(/[\u0600-\u06ff]/g)?.length ?? 0;
@@ -71,6 +80,7 @@ function selectedReferenceText(reference: CourseReference) {
 
 export function CourseCompletePage() {
   const { courseId } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const load = useCallback(async () => {
     if (!courseId) {
       return null;
@@ -129,6 +139,28 @@ export function CourseCompletePage() {
     : nextWorkflowStep
       ? { label: `Continuer : ${nextWorkflowStep.label}`, href: `/cours/${data.course.id}/traitement` }
       : null;
+  const requestedView = searchParams.get("vue") as ReaderView | null;
+  const hasSynthesis = Boolean(artifactByType(data.artifacts, "synthese"));
+  const hasFiche = Boolean(artifactByType(data.artifacts, "fiche"));
+  const currentView: ReaderView =
+    requestedView && ["synthese", "fiche", "sources", "images", "tout"].includes(requestedView)
+      ? requestedView
+      : hasSynthesis
+        ? "synthese"
+        : hasFiche
+          ? "fiche"
+          : "sources";
+  const fullView = currentView === "tout";
+
+  function selectView(view: ReaderView) {
+    const next = new URLSearchParams(searchParams);
+    if (view === "synthese") {
+      next.delete("vue");
+    } else {
+      next.set("vue", view);
+    }
+    setSearchParams(next, { replace: true });
+  }
 
   return (
     <article className="stack complete-course">
@@ -182,10 +214,42 @@ export function CourseCompletePage() {
         </div>
       )}
 
+      <nav className="course-reader-tabs" aria-label="Sections du cours">
+        {readerTabs.map((tab) => {
+          const available =
+            tab.key === "synthese"
+              ? hasSynthesis
+              : tab.key === "fiche"
+                ? hasFiche
+                : tab.key === "sources"
+                  ? data.references.length > 0 || data.course.etapes.sources.fait
+                  : data.images.length > 0;
+          return (
+            <button
+              aria-current={currentView === tab.key ? "page" : undefined}
+              className={currentView === tab.key ? "course-reader-tab active" : "course-reader-tab"}
+              key={tab.key}
+              onClick={() => selectView(tab.key)}
+              type="button"
+            >
+              <span>{tab.label}</span>
+              {available ? <i /> : null}
+            </button>
+          );
+        })}
+        <button
+          className={fullView ? "course-reader-tab course-reader-tab--all active" : "course-reader-tab course-reader-tab--all"}
+          onClick={() => selectView("tout")}
+          type="button"
+        >
+          Vue complète
+        </button>
+      </nav>
+
       {readingArtifacts.map((section) => {
         const artifact = artifactByType(data.artifacts, section.type);
 
-        if (!artifact) {
+        if (!artifact || (!fullView && currentView !== section.type)) {
           return null;
         }
 
@@ -216,7 +280,7 @@ export function CourseCompletePage() {
         );
       })}
 
-      <section className="complete-section">
+      {fullView || currentView === "sources" ? <section className="complete-section">
         <div className="complete-section__head">
           <p className="eyebrow">Références</p>
           <h2>Sources validées</h2>
@@ -242,9 +306,9 @@ export function CourseCompletePage() {
             <p>Les références apparaîtront ici après validation des sources.</p>
           </div>
         )}
-      </section>
+      </section> : null}
 
-      {data.images.length > 0 ? (
+      {(fullView || currentView === "images") && data.images.length > 0 ? (
         <section className="complete-section">
           <div className="complete-section__head">
             <p className="eyebrow">Images</p>
@@ -267,6 +331,20 @@ export function CourseCompletePage() {
                 )}
               </Link>
             ))}
+          </div>
+        </section>
+      ) : null}
+
+      {(fullView || currentView === "images") && data.images.length === 0 ? (
+        <section className="complete-section">
+          <div className="complete-section__head">
+            <p className="eyebrow">Images</p>
+            <h2>Fiches images</h2>
+          </div>
+          <div className="empty-state">
+            <h2>Aucune fiche image</h2>
+            <p>Elle apparaîtra ici après sa génération et son dépôt.</p>
+            <Link className="tool on" to={`/cours/${data.course.id}/images/new`}>Déposer une image</Link>
           </div>
         </section>
       ) : null}
