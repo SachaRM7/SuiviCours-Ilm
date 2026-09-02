@@ -3,6 +3,7 @@ import { HttpsError, onCall } from "firebase-functions/v2/https";
 
 const openaiApiKey = defineSecret("OPENAI_API_KEY");
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
+const groqApiKey = defineSecret("GROQ_API_KEY");
 const allowedUid = defineSecret("ALLOWED_UID");
 
 const providerConfig = {
@@ -14,7 +15,14 @@ const providerConfig = {
     defaultModel: "claude-sonnet-5-20260715",
     endpoint: "https://api.anthropic.com/v1/messages",
   },
+  groq: {
+    defaultModel: "qwen/qwen3.8-27b",
+    endpoint: "https://api.groq.com/openai/v1/chat/completions",
+  },
 };
+
+const groqModels = new Set([providerConfig.groq.defaultModel]);
+const reasoningEfforts = new Set(["none", "low", "medium", "high"]);
 
 function requireString(value, field) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -122,12 +130,55 @@ async function callAnthropic({ prompt, model }) {
   return outputText;
 }
 
+async function callGroq({ prompt, model, reasoningEffort }) {
+  const apiKey = groqApiKey.value();
+  if (!apiKey) {
+    throw new HttpsError(
+      "failed-precondition",
+      "GROQ_API_KEY n'est pas configuree.",
+    );
+  }
+
+  if (!groqModels.has(model)) {
+    throw new HttpsError("invalid-argument", "Modele Groq non autorise.");
+  }
+
+  const response = await fetch(providerConfig.groq.endpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: "user", content: prompt }],
+      max_completion_tokens: 16384,
+      reasoning_effort: reasoningEffort,
+    }),
+  });
+  const body = await response.json();
+
+  if (!response.ok) {
+    throw new HttpsError(
+      "internal",
+      body.error?.message ?? "Erreur Groq.",
+    );
+  }
+
+  const outputText = body.choices?.[0]?.message?.content?.trim();
+  if (!outputText) {
+    throw new HttpsError("internal", "Reponse Groq vide.");
+  }
+
+  return outputText;
+}
+
 export const generatePipelineStep = onCall(
   {
     region: "europe-west1",
     timeoutSeconds: 540,
     memory: "1GiB",
-    secrets: [openaiApiKey, anthropicApiKey, allowedUid],
+    secrets: [openaiApiKey, anthropicApiKey, groqApiKey, allowedUid],
   },
   async (request) => {
     assertAllowed(request);
@@ -144,11 +195,19 @@ export const generatePipelineStep = onCall(
       typeof request.data?.model === "string" && request.data.model.trim()
         ? request.data.model.trim()
         : config.defaultModel;
+    const requestedReasoningEffort = request.data?.reasoningEffort;
+    const reasoningEffort = reasoningEfforts.has(requestedReasoningEffort)
+      ? requestedReasoningEffort
+      : "medium";
 
-    const text =
-      provider === "openai"
-        ? await callOpenAI({ prompt, model })
-        : await callAnthropic({ prompt, model });
+    let text;
+    if (provider === "openai") {
+      text = await callOpenAI({ prompt, model });
+    } else if (provider === "anthropic") {
+      text = await callAnthropic({ prompt, model });
+    } else {
+      text = await callGroq({ prompt, model, reasoningEffort });
+    }
 
     return { text, provider, model };
   },

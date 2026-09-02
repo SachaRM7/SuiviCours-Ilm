@@ -25,7 +25,7 @@ import type {
   PromptStep,
   StepKey,
 } from "../types/domain";
-import type { AiProvider } from "../lib/aiRepository";
+import type { AiProvider, AiReasoningEffort } from "../lib/aiRepository";
 
 type StepDefinition = {
   key: StepKey;
@@ -38,9 +38,10 @@ type StepDefinition = {
   unlocksAfter?: StepKey;
   destination: string;
   recommendedModelId?: AiModelId;
+  reasoningEffort?: AiReasoningEffort;
 };
 
-type AiModelId = "luna" | "sonnet" | "opus";
+type AiModelId = "qwen" | "luna" | "sonnet" | "opus";
 
 type AiModelOption = {
   id: AiModelId;
@@ -57,6 +58,13 @@ type PromptFallback = {
 };
 
 const aiModelOptions: AiModelOption[] = [
+  {
+    id: "qwen",
+    label: "Qwen 3.8 27B",
+    provider: "groq",
+    model: "qwen/qwen3.8-27b",
+    tone: "Rapide sur Groq, raisonnement adapté",
+  },
   {
     id: "luna",
     label: "GPT-5.6 Luna",
@@ -99,7 +107,8 @@ const steps: StepDefinition[] = [
       "À joindre au prompt : la transcription brute produite par Notebook Gemini.",
     resultArtifactType: "transcription_corrigee",
     destination: "IA",
-    recommendedModelId: "luna",
+    recommendedModelId: "qwen",
+    reasoningEffort: "low",
   },
   {
     key: "synthese",
@@ -111,7 +120,8 @@ const steps: StepDefinition[] = [
     sourceArtifactType: "transcription_corrigee",
     unlocksAfter: "correction",
     destination: "IA",
-    recommendedModelId: "sonnet",
+    recommendedModelId: "qwen",
+    reasoningEffort: "medium",
   },
   {
     key: "sources",
@@ -122,7 +132,8 @@ const steps: StepDefinition[] = [
     sourceArtifactType: "synthese",
     unlocksAfter: "synthese",
     destination: "IA",
-    recommendedModelId: "sonnet",
+    recommendedModelId: "qwen",
+    reasoningEffort: "high",
   },
   {
     key: "fiche",
@@ -134,7 +145,8 @@ const steps: StepDefinition[] = [
     sourceArtifactType: "synthese",
     unlocksAfter: "sources",
     destination: "IA",
-    recommendedModelId: "luna",
+    recommendedModelId: "qwen",
+    reasoningEffort: "medium",
   },
   {
     key: "image",
@@ -146,7 +158,8 @@ const steps: StepDefinition[] = [
     sourceArtifactType: "fiche",
     unlocksAfter: "fiche",
     destination: "IA",
-    recommendedModelId: "luna",
+    recommendedModelId: "qwen",
+    reasoningEffort: "medium",
   },
 ];
 
@@ -400,6 +413,7 @@ export function TreatmentPage() {
         provider: selectedModel.provider,
         model: selectedModel.model,
         prompt,
+        reasoningEffort: step.reasoningEffort,
       });
       setResults((current) => ({ ...current, [step.key]: result.text }));
       setNotice(

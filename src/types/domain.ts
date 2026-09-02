@@ -166,7 +166,7 @@ export type PromptTemplate = {
   template: string;
   version: number;
   actif: boolean;
-  aiProvider?: "openai" | "anthropic";
+  aiProvider?: "openai" | "anthropic" | "groq";
   aiModel?: string;
 };
 

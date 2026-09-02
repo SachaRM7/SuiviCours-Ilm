@@ -227,6 +227,7 @@ export function PromptsPage() {
                   >
                     <option value="openai">OpenAI</option>
                     <option value="anthropic">Anthropic</option>
+                    <option value="groq">Groq</option>
                   </select>
                 </label>
                 <label className="field">
@@ -236,7 +237,9 @@ export function PromptsPage() {
                     placeholder={
                       aiProvider === "anthropic"
                         ? "claude-sonnet-5-20260715"
-                        : "gpt-5.6-luna"
+                        : aiProvider === "groq"
+                          ? "qwen/qwen3.8-27b"
+                          : "gpt-5.6-luna"
                     }
                     value={aiModel}
                   />
