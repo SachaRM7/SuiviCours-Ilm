@@ -529,11 +529,7 @@ export function TreatmentPage() {
         audioUrl: part.url,
         storagePath: part.storagePath,
       });
-      transcribedParts.push(
-        audioParts.length > 1
-          ? `## Partie ${index + 1} · ${part.nom}\n\n${transcription.text}`
-          : transcription.text,
-      );
+      transcribedParts.push(transcription.text);
       setResults((current) => ({
         ...current,
         transcription: transcribedParts.join("\n\n"),
@@ -1097,7 +1093,7 @@ export function TreatmentPage() {
                         ) : null}
                       </div>
                       <p className="transcription-audio__note">
-                        Les parties sont transcrites dans cet ordre puis réunies en un seul texte.
+                        Les parties sont transcrites dans cet ordre et assemblées en un texte continu.
                       </p>
                     </div>
                   ) : null}
