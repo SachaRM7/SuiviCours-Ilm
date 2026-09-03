@@ -77,7 +77,7 @@ export function NewCoursePage() {
   const [date, setDate] = useState(isoDate(new Date()));
   const [time, setTime] = useState("20:30");
   const [titre, setTitre] = useState("");
-  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioFiles, setAudioFiles] = useState<File[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -176,7 +176,7 @@ export function NewCoursePage() {
         numero,
         titre,
         date: `${date}T${time || "00:00"}:00`,
-        audioFile: input?.quick ? null : audioFile,
+        audioFiles: input?.quick ? [] : audioFiles,
       });
       await clearCloudState("new-course");
       navigate(`/cours/${courseId}/traitement`);
@@ -373,21 +373,21 @@ export function NewCoursePage() {
               <input
                 accept=".m4a,.mp3,.wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/x-wav"
                 onChange={(event) => {
-                  const file = event.target.files?.[0] ?? null;
+                  const files = Array.from(event.target.files ?? []);
 
                   setMessage(null);
 
-                  if (!file) {
-                    setAudioFile(null);
+                  if (files.length === 0) {
+                    setAudioFiles([]);
                     return;
                   }
 
                   try {
-                    validateAudioFile(file);
-                    setAudioFile(file);
+                    files.forEach(validateAudioFile);
+                    setAudioFiles(files);
                   } catch (reason) {
                     event.target.value = "";
-                    setAudioFile(null);
+                    setAudioFiles([]);
                     setMessage(
                       reason instanceof Error
                         ? reason.message
@@ -395,15 +395,18 @@ export function NewCoursePage() {
                     );
                   }
                 }}
+                multiple
                 type="file"
               />
               <span className="audio-drop__icon">♪</span>
               <span>
                 <strong>
-                  {audioFile ? audioFile.name : "Déposer le fichier audio"}
+                  {audioFiles.length > 0
+                    ? `${audioFiles.length} partie${audioFiles.length > 1 ? "s" : ""} sélectionnée${audioFiles.length > 1 ? "s" : ""}`
+                    : "Déposer une ou plusieurs parties audio"}
                 </strong>
                 <small>
-                  Facultatif · prêt pour la transcription IA · 25 Mo max
+                  Facultatif · ordre de sélection conservé · 25 Mo max par partie
                 </small>
               </span>
             </label>

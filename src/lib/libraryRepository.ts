@@ -20,6 +20,7 @@ import type {
   ArtifactVersion,
   ArtifactType,
   Course,
+  CourseAudioPart,
   CourseImage,
   CourseModule,
   CourseReference,
@@ -63,6 +64,40 @@ const acceptedAudioTypes = new Set([
 const acceptedAudioExtensions = /\.(m4a|mp3|wav)$/i;
 const maxAudioSize = 25 * 1024 * 1024;
 
+function audioPartsFromData(data: DocumentData): CourseAudioPart[] {
+  if (Array.isArray(data.audioParts) && data.audioParts.length > 0) {
+    return data.audioParts
+      .map((part: CourseAudioPart, index: number) => ({
+        id: part.id,
+        nom: part.nom || `Partie ${index + 1}`,
+        url: part.url,
+        storagePath: part.storagePath,
+        ordre: Number.isFinite(part.ordre) ? part.ordre : index,
+        taille: Number(part.taille ?? 0),
+      }))
+      .sort((left: CourseAudioPart, right: CourseAudioPart) => left.ordre - right.ordre);
+  }
+
+  if (data.audioUrl) {
+    const storagePath =
+      data.audioStoragePath ?? storagePathFromDownloadUrl(data.audioUrl);
+    if (storagePath) {
+      return [
+        {
+          id: storagePath.split("/").pop() ?? "audio-1",
+          nom: "Audio du cours",
+          url: data.audioUrl,
+          storagePath,
+          ordre: 0,
+          taille: 0,
+        },
+      ];
+    }
+  }
+
+  return [];
+}
+
 function professorFromDoc(doc: QueryDocumentSnapshot<DocumentData>): Professor {
   const data = doc.data();
 
@@ -94,6 +129,7 @@ function moduleFromDoc(
 
 function courseFromDoc(doc: QueryDocumentSnapshot<DocumentData>): Course {
   const data = doc.data();
+  const audioParts = audioPartsFromData(data);
 
   return {
     id: doc.id,
@@ -107,6 +143,7 @@ function courseFromDoc(doc: QueryDocumentSnapshot<DocumentData>): Course {
     audioStoragePath:
       data.audioStoragePath ??
       (data.audioUrl ? storagePathFromDownloadUrl(data.audioUrl) : null),
+    audioParts,
     etapes: data.etapes,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
@@ -258,7 +295,9 @@ export async function getCourseContext(
       );
 
       if (courseDoc.exists()) {
-        const courseData = courseDoc.data() as Omit<Course, "id">;
+        const rawCourseData = courseDoc.data();
+        const courseData = rawCourseData as Omit<Course, "id">;
+        const audioParts = audioPartsFromData(rawCourseData);
         return {
           professor,
           module,
@@ -271,6 +310,7 @@ export async function getCourseContext(
               (courseData.audioUrl
                 ? storagePathFromDownloadUrl(courseData.audioUrl)
                 : null),
+            audioParts,
           },
         };
       }
@@ -297,7 +337,7 @@ export async function createCourse(input: {
   numero: number;
   titre: string;
   date: string;
-  audioFile?: File | null;
+  audioFiles?: File[];
 }) {
   const courseId = `${input.moduleId}-${input.numero}`;
   const now = new Date().toISOString();
@@ -326,18 +366,21 @@ export async function createCourse(input: {
     throw new Error(`Le cours ${input.numero} existe déjà pour ce module.`);
   }
 
-  if (input.audioFile) {
-    validateAudioFile(input.audioFile);
-  }
-
-  const audio = input.audioFile
-    ? await uploadCourseAudio({
+  const audioFiles = input.audioFiles ?? [];
+  audioFiles.forEach(validateAudioFile);
+  const audioParts: CourseAudioPart[] = [];
+  for (const [index, file] of audioFiles.entries()) {
+    audioParts.push(
+      await uploadCourseAudio({
         professorId: input.professorId,
         moduleId: input.moduleId,
         courseId,
-        file: input.audioFile,
-      })
-    : null;
+        file,
+        ordre: index,
+      }),
+    );
+  }
+  const firstAudio = audioParts[0] ?? null;
 
   const course: Omit<Course, "id"> = {
     professeurId: input.professorId,
@@ -346,8 +389,9 @@ export async function createCourse(input: {
     titre: input.titre,
     titreValide: Boolean(input.titre.trim()),
     date: input.date,
-    audioUrl: audio?.url ?? null,
-    audioStoragePath: audio?.storagePath ?? null,
+    audioUrl: firstAudio?.url ?? null,
+    audioStoragePath: firstAudio?.storagePath ?? null,
+    audioParts,
     etapes: emptySteps(),
     createdAt: now,
     updatedAt: now,
@@ -376,45 +420,111 @@ async function uploadCourseAudio(input: {
   moduleId: string;
   courseId: string;
   file: File;
+  ordre: number;
 }) {
+  const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
   const safeName = input.file.name.replace(/[^\w.-]+/g, "-");
-  const storagePath = `professeurs/${input.professorId}/modules/${input.moduleId}/cours/${input.courseId}/audio/${Date.now()}-${safeName}`;
+  const storagePath = `professeurs/${input.professorId}/modules/${input.moduleId}/cours/${input.courseId}/audio/${id}-${safeName}`;
   const storageRef = ref(storage, storagePath);
   const uploaded = await uploadBytes(storageRef, input.file);
 
   return {
+    id,
+    nom: input.file.name,
     url: await getDownloadURL(uploaded.ref),
     storagePath,
+    ordre: input.ordre,
+    taille: input.file.size,
   };
 }
 
-export async function saveCourseAudio(input: {
+export async function saveCourseAudioParts(input: {
   professorId: string;
   moduleId: string;
   courseId: string;
-  file: File;
+  files: File[];
 }) {
-  validateAudioFile(input.file);
-  const audio = await uploadCourseAudio(input);
+  input.files.forEach(validateAudioFile);
+  const courseRef = doc(
+    db,
+    "professeurs",
+    input.professorId,
+    "modules",
+    input.moduleId,
+    "cours",
+    input.courseId,
+  );
+  const courseSnapshot = await getDoc(courseRef);
+  const existingParts = courseSnapshot.exists()
+    ? audioPartsFromData(courseSnapshot.data())
+    : [];
+  const uploadedParts: CourseAudioPart[] = [];
+  for (const [index, file] of input.files.entries()) {
+    uploadedParts.push(
+      await uploadCourseAudio({
+        ...input,
+        file,
+        ordre: existingParts.length + index,
+      }),
+    );
+  }
+  const audioParts = [...existingParts, ...uploadedParts].map((part, index) => ({
+    ...part,
+    ordre: index,
+  }));
+  const firstAudio = audioParts[0] ?? null;
 
+  await updateDoc(courseRef, {
+    audioUrl: firstAudio?.url ?? null,
+    audioStoragePath: firstAudio?.storagePath ?? null,
+    audioParts,
+    updatedAt: new Date().toISOString(),
+  });
+
+  return audioParts;
+}
+
+export async function saveCourseAudioPartsOrder(input: {
+  professorId: string;
+  moduleId: string;
+  courseId: string;
+  audioParts: CourseAudioPart[];
+}) {
+  const audioParts = input.audioParts.map((part, index) => ({
+    ...part,
+    ordre: index,
+  }));
+  const firstAudio = audioParts[0] ?? null;
   await updateDoc(
-    doc(
-      db,
-      "professeurs",
-      input.professorId,
-      "modules",
-      input.moduleId,
-      "cours",
-      input.courseId,
-    ),
+    doc(db, "professeurs", input.professorId, "modules", input.moduleId, "cours", input.courseId),
     {
-      audioUrl: audio.url,
-      audioStoragePath: audio.storagePath,
+      audioUrl: firstAudio?.url ?? null,
+      audioStoragePath: firstAudio?.storagePath ?? null,
+      audioParts,
       updatedAt: new Date().toISOString(),
     },
   );
+}
 
-  return audio;
+export async function deleteCourseAudioPart(input: {
+  professorId: string;
+  moduleId: string;
+  courseId: string;
+  part: CourseAudioPart;
+  remainingParts: CourseAudioPart[];
+}) {
+  try {
+    await deleteObject(ref(storage, input.part.storagePath));
+  } catch (error) {
+    if ((error as { code?: string }).code !== "storage/object-not-found") {
+      throw error;
+    }
+  }
+
+  await saveCourseAudioPartsOrder({
+    ...input,
+    audioParts: input.remainingParts,
+  });
 }
 
 function stepForArtifact(type: ArtifactType): keyof Course["etapes"] {

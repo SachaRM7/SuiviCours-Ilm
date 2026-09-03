@@ -39,6 +39,15 @@ export type CourseStep = {
   obsolete: boolean;
 };
 
+export type CourseAudioPart = {
+  id: string;
+  nom: string;
+  url: string;
+  storagePath: string;
+  ordre: number;
+  taille: number;
+};
+
 export type Course = {
   id: string;
   professeurId: string;
@@ -49,6 +58,7 @@ export type Course = {
   date: string;
   audioUrl: string | null;
   audioStoragePath: string | null;
+  audioParts: CourseAudioPart[];
   etapes: Record<StepKey, CourseStep>;
   createdAt: string;
   updatedAt: string;

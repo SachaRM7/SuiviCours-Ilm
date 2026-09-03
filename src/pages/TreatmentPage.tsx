@@ -8,7 +8,9 @@ import {
   getCourseContext,
   markStepDone,
   restartStep,
-  saveCourseAudio,
+  deleteCourseAudioPart,
+  saveCourseAudioParts,
+  saveCourseAudioPartsOrder,
   saveArtifact,
   saveDetectedReferences,
   updateCourseTitle,
@@ -25,6 +27,7 @@ import { buildPromptPayload } from "../lib/promptRepository";
 import type {
   ArtifactType,
   Course,
+  CourseAudioPart,
   PromptStep,
   StepKey,
 } from "../types/domain";
@@ -276,10 +279,11 @@ export function TreatmentPage() {
     "loading" | "saving" | "saved" | "error"
   >("loading");
   const [notice, setNotice] = useState<string | null>(null);
-  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioFiles, setAudioFiles] = useState<File[]>([]);
   const [audioBusy, setAudioBusy] = useState<"upload" | "transcribe" | null>(
     null,
   );
+  const [audioProgress, setAudioProgress] = useState({ current: 0, total: 0 });
 
   useEffect(() => {
     let active = true;
@@ -514,26 +518,35 @@ export function TreatmentPage() {
     }
   }
 
-  async function runAudioTranscription(audio: {
-    url: string;
-    storagePath: string;
-  }) {
+  async function runAudioTranscription(audioParts: CourseAudioPart[]) {
     setAudioBusy("transcribe");
-    const transcription = await transcribeWithAi({
-      audioUrl: audio.url,
-      storagePath: audio.storagePath,
-    });
-    setResults((current) => ({
-      ...current,
-      transcription: transcription.text,
-    }));
+    setAudioProgress({ current: 0, total: audioParts.length });
+    const transcribedParts: string[] = [];
+
+    for (const [index, part] of audioParts.entries()) {
+      setAudioProgress({ current: index + 1, total: audioParts.length });
+      const transcription = await transcribeWithAi({
+        audioUrl: part.url,
+        storagePath: part.storagePath,
+      });
+      transcribedParts.push(
+        audioParts.length > 1
+          ? `## Partie ${index + 1} · ${part.nom}\n\n${transcription.text}`
+          : transcription.text,
+      );
+      setResults((current) => ({
+        ...current,
+        transcription: transcribedParts.join("\n\n"),
+      }));
+    }
+
     setNotice(
-      "Transcription terminée avec Whisper Large V3. Relis-la puis enregistre.",
+      `${audioParts.length} partie${audioParts.length > 1 ? "s" : ""} transcrite${audioParts.length > 1 ? "s" : ""} avec Whisper Large V3. Relis puis enregistre.`,
     );
   }
 
   async function handleUploadAndTranscribe() {
-    if (!data || !audioFile) {
+    if (!data || audioFiles.length === 0) {
       return;
     }
 
@@ -542,16 +555,16 @@ export function TreatmentPage() {
     setAudioBusy("upload");
 
     try {
-      validateAudioFile(audioFile);
-      const audio = await saveCourseAudio({
+      audioFiles.forEach(validateAudioFile);
+      const audioParts = await saveCourseAudioParts({
         professorId: data.professor.id,
         moduleId: data.module.id,
         courseId: data.course.id,
-        file: audioFile,
+        files: audioFiles,
       });
-      setAudioFile(null);
+      setAudioFiles([]);
       setReloadKey((key) => key + 1);
-      await runAudioTranscription(audio);
+      await runAudioTranscription(audioParts);
     } catch (reason) {
       setAiError(
         reason instanceof Error
@@ -560,28 +573,77 @@ export function TreatmentPage() {
       );
     } finally {
       setAudioBusy(null);
+      setAudioProgress({ current: 0, total: 0 });
     }
   }
 
   async function handleTranscribeStoredAudio() {
-    if (!data?.course.audioUrl || !data.course.audioStoragePath) {
-      setAiError("Dépose d'abord le fichier audio du cours.");
+    if (!data || data.course.audioParts.length === 0) {
+      setAiError("Dépose d'abord une ou plusieurs parties audio.");
       return;
     }
 
     setNotice(null);
     setAiError(null);
     try {
-      await runAudioTranscription({
-        url: data.course.audioUrl,
-        storagePath: data.course.audioStoragePath,
-      });
+      await runAudioTranscription(data.course.audioParts);
     } catch (reason) {
       setAiError(
         reason instanceof Error
           ? reason.message
           : "La transcription audio a échoué.",
       );
+    } finally {
+      setAudioBusy(null);
+      setAudioProgress({ current: 0, total: 0 });
+    }
+  }
+
+  async function handleMoveAudioPart(index: number, direction: -1 | 1) {
+    if (!data) {
+      return;
+    }
+
+    const target = index + direction;
+    if (target < 0 || target >= data.course.audioParts.length) {
+      return;
+    }
+
+    const reordered = [...data.course.audioParts];
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    setAudioBusy("upload");
+    try {
+      await saveCourseAudioPartsOrder({
+        professorId: data.professor.id,
+        moduleId: data.module.id,
+        courseId: data.course.id,
+        audioParts: reordered,
+      });
+      setReloadKey((key) => key + 1);
+    } finally {
+      setAudioBusy(null);
+    }
+  }
+
+  async function handleDeleteAudioPart(part: CourseAudioPart) {
+    if (!data || !window.confirm(`Supprimer « ${part.nom} » ?`)) {
+      return;
+    }
+
+    setAudioBusy("upload");
+    setAiError(null);
+    try {
+      await deleteCourseAudioPart({
+        professorId: data.professor.id,
+        moduleId: data.module.id,
+        courseId: data.course.id,
+        part,
+        remainingParts: data.course.audioParts.filter((item) => item.id !== part.id),
+      });
+      setReloadKey((key) => key + 1);
+      setNotice("Partie audio supprimée.");
+    } catch (reason) {
+      setAiError(reason instanceof Error ? reason.message : "Suppression impossible.");
     } finally {
       setAudioBusy(null);
     }
@@ -912,20 +974,20 @@ export function TreatmentPage() {
                           accept=".m4a,.mp3,.wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/x-wav"
                           disabled={audioBusy !== null}
                           onChange={(event) => {
-                            const file = event.target.files?.[0] ?? null;
+                            const files = Array.from(event.target.files ?? []);
                             setAiError(null);
 
-                            if (!file) {
-                              setAudioFile(null);
+                            if (files.length === 0) {
+                              setAudioFiles([]);
                               return;
                             }
 
                             try {
-                              validateAudioFile(file);
-                              setAudioFile(file);
+                              files.forEach(validateAudioFile);
+                              setAudioFiles(files);
                             } catch (reason) {
                               event.target.value = "";
-                              setAudioFile(null);
+                              setAudioFiles([]);
                               setAiError(
                                 reason instanceof Error
                                   ? reason.message
@@ -933,6 +995,7 @@ export function TreatmentPage() {
                               );
                             }
                           }}
+                          multiple
                           type="file"
                         />
                         <span className="audio-drop__icon" aria-hidden="true">
@@ -940,27 +1003,74 @@ export function TreatmentPage() {
                         </span>
                         <span>
                           <strong>
-                            {audioFile
-                              ? audioFile.name
-                              : data.course.audioUrl
-                                ? "Remplacer le fichier audio"
-                                : "Choisir le fichier audio"}
+                            {audioFiles.length > 0
+                              ? `${audioFiles.length} nouvelle${audioFiles.length > 1 ? "s" : ""} partie${audioFiles.length > 1 ? "s" : ""}`
+                              : data.course.audioParts.length > 0
+                                ? "Ajouter d'autres parties"
+                                : "Choisir une ou plusieurs parties"}
                           </strong>
-                          <small>m4a, mp3 ou wav · 25 Mo maximum</small>
+                          <small>Ordre de sélection conservé · 25 Mo maximum par partie</small>
                         </span>
                       </label>
 
-                      {data.course.audioUrl ? (
-                        <audio
-                          className="transcription-audio__player"
-                          controls
-                          preload="metadata"
-                          src={data.course.audioUrl}
-                        />
+                      {data.course.audioParts.length > 0 ? (
+                        <ol className="audio-parts" aria-label="Parties audio du cours">
+                          {data.course.audioParts.map((part, partIndex) => (
+                            <li className="audio-part" key={part.id}>
+                              <div className="audio-part__head">
+                                <span className="audio-part__number">
+                                  {partIndex + 1}
+                                </span>
+                                <strong>{part.nom}</strong>
+                                <div className="audio-part__tools">
+                                  <button
+                                    aria-label={`Monter ${part.nom}`}
+                                    className="icon-tool"
+                                    disabled={audioBusy !== null || partIndex === 0}
+                                    onClick={() => handleMoveAudioPart(partIndex, -1)}
+                                    title="Monter"
+                                    type="button"
+                                  >
+                                    ↑
+                                  </button>
+                                  <button
+                                    aria-label={`Descendre ${part.nom}`}
+                                    className="icon-tool"
+                                    disabled={
+                                      audioBusy !== null ||
+                                      partIndex === data.course.audioParts.length - 1
+                                    }
+                                    onClick={() => handleMoveAudioPart(partIndex, 1)}
+                                    title="Descendre"
+                                    type="button"
+                                  >
+                                    ↓
+                                  </button>
+                                  <button
+                                    aria-label={`Supprimer ${part.nom}`}
+                                    className="icon-tool icon-tool--danger"
+                                    disabled={audioBusy !== null}
+                                    onClick={() => handleDeleteAudioPart(part)}
+                                    title="Supprimer"
+                                    type="button"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              </div>
+                              <audio
+                                className="transcription-audio__player"
+                                controls
+                                preload="metadata"
+                                src={part.url}
+                              />
+                            </li>
+                          ))}
+                        </ol>
                       ) : null}
 
                       <div className="transcription-audio__actions">
-                        {audioFile ? (
+                        {audioFiles.length > 0 ? (
                           <button
                             className="button button--primary"
                             disabled={audioBusy !== null}
@@ -973,21 +1083,21 @@ export function TreatmentPage() {
                                 ? "Transcription en cours..."
                                 : "Importer et transcrire"}
                           </button>
-                        ) : data.course.audioUrl ? (
+                        ) : data.course.audioParts.length > 0 ? (
                           <button
                             className="button button--primary"
                             disabled={audioBusy !== null}
                             onClick={handleTranscribeStoredAudio}
                             type="button"
                           >
-                            {audioBusy
-                              ? "Transcription en cours..."
-                              : "Transcrire l'audio"}
+                            {audioBusy === "transcribe"
+                              ? `Transcription ${audioProgress.current}/${audioProgress.total}...`
+                              : "Transcrire toutes les parties"}
                           </button>
                         ) : null}
                       </div>
                       <p className="transcription-audio__note">
-                        Français principal, avec préservation attentive des termes arabes.
+                        Les parties sont transcrites dans cet ordre puis réunies en un seul texte.
                       </p>
                     </div>
                   ) : null}
