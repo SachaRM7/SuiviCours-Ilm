@@ -32,6 +32,7 @@ type SearchItem =
     };
 
 const artifactLabel: Record<Artifact["type"], string> = {
+  transcription_brute: "Transcription brute",
   synthese: "Synthèse",
   fiche: "Fiche",
   transcription_corrigee: "Transcription",

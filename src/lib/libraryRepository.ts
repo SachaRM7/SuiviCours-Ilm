@@ -61,7 +61,7 @@ const acceptedAudioTypes = new Set([
   "audio/x-wav",
 ]);
 const acceptedAudioExtensions = /\.(m4a|mp3|wav)$/i;
-const maxAudioSize = 200 * 1024 * 1024;
+const maxAudioSize = 25 * 1024 * 1024;
 
 function professorFromDoc(doc: QueryDocumentSnapshot<DocumentData>): Professor {
   const data = doc.data();
@@ -104,6 +104,9 @@ function courseFromDoc(doc: QueryDocumentSnapshot<DocumentData>): Course {
     titreValide: data.titreValide ?? false,
     date: data.date,
     audioUrl: data.audioUrl ?? null,
+    audioStoragePath:
+      data.audioStoragePath ??
+      (data.audioUrl ? storagePathFromDownloadUrl(data.audioUrl) : null),
     etapes: data.etapes,
     createdAt: data.createdAt,
     updatedAt: data.updatedAt,
@@ -255,12 +258,19 @@ export async function getCourseContext(
       );
 
       if (courseDoc.exists()) {
+        const courseData = courseDoc.data() as Omit<Course, "id">;
         return {
           professor,
           module,
           course: {
             id: courseDoc.id,
-            ...(courseDoc.data() as Omit<Course, "id">),
+            ...courseData,
+            audioUrl: courseData.audioUrl ?? null,
+            audioStoragePath:
+              courseData.audioStoragePath ??
+              (courseData.audioUrl
+                ? storagePathFromDownloadUrl(courseData.audioUrl)
+                : null),
           },
         };
       }
@@ -320,7 +330,7 @@ export async function createCourse(input: {
     validateAudioFile(input.audioFile);
   }
 
-  const audioUrl = input.audioFile
+  const audio = input.audioFile
     ? await uploadCourseAudio({
         professorId: input.professorId,
         moduleId: input.moduleId,
@@ -336,7 +346,8 @@ export async function createCourse(input: {
     titre: input.titre,
     titreValide: Boolean(input.titre.trim()),
     date: input.date,
-    audioUrl,
+    audioUrl: audio?.url ?? null,
+    audioStoragePath: audio?.storagePath ?? null,
     etapes: emptySteps(),
     createdAt: now,
     updatedAt: now,
@@ -352,7 +363,7 @@ export async function createCourse(input: {
 
 export function validateAudioFile(file: File) {
   if (file.size > maxAudioSize) {
-    throw new Error("Le fichier audio dépasse la limite de 200 Mo.");
+    throw new Error("Le fichier audio dépasse la limite gratuite de 25 Mo.");
   }
 
   if (!acceptedAudioTypes.has(file.type) && !acceptedAudioExtensions.test(file.name)) {
@@ -367,16 +378,50 @@ async function uploadCourseAudio(input: {
   file: File;
 }) {
   const safeName = input.file.name.replace(/[^\w.-]+/g, "-");
-  const storageRef = ref(
-    storage,
-    `professeurs/${input.professorId}/modules/${input.moduleId}/cours/${input.courseId}/audio/${Date.now()}-${safeName}`,
-  );
+  const storagePath = `professeurs/${input.professorId}/modules/${input.moduleId}/cours/${input.courseId}/audio/${Date.now()}-${safeName}`;
+  const storageRef = ref(storage, storagePath);
   const uploaded = await uploadBytes(storageRef, input.file);
 
-  return getDownloadURL(uploaded.ref);
+  return {
+    url: await getDownloadURL(uploaded.ref),
+    storagePath,
+  };
+}
+
+export async function saveCourseAudio(input: {
+  professorId: string;
+  moduleId: string;
+  courseId: string;
+  file: File;
+}) {
+  validateAudioFile(input.file);
+  const audio = await uploadCourseAudio(input);
+
+  await updateDoc(
+    doc(
+      db,
+      "professeurs",
+      input.professorId,
+      "modules",
+      input.moduleId,
+      "cours",
+      input.courseId,
+    ),
+    {
+      audioUrl: audio.url,
+      audioStoragePath: audio.storagePath,
+      updatedAt: new Date().toISOString(),
+    },
+  );
+
+  return audio;
 }
 
 function stepForArtifact(type: ArtifactType): keyof Course["etapes"] {
+  if (type === "transcription_brute") {
+    return "transcription";
+  }
+
   if (type === "transcription_corrigee") {
     return "correction";
   }

@@ -12,6 +12,7 @@ import { getArtifactEditorData, saveArtifact } from "../lib/libraryRepository";
 import type { ArtifactType } from "../types/domain";
 
 const labels: Record<ArtifactType, string> = {
+  transcription_brute: "Transcription brute",
   synthese: "Synthèse",
   fiche: "Fiche de révision",
   transcription_corrigee: "Transcription",

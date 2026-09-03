@@ -18,6 +18,7 @@ import {
 import type { Artifact, ArtifactType, ArtifactVersion } from "../types/domain";
 
 const labelByType: Record<ArtifactType, string> = {
+  transcription_brute: "Transcription brute",
   synthese: "Synthèse",
   fiche: "Fiche de révision",
   transcription_corrigee: "Transcription",
@@ -33,8 +34,9 @@ const crossLinks: Array<{ type: ArtifactType; label: string }> = [
 
 const stepByArtifactType: Record<
   ArtifactType,
-  "synthese" | "fiche" | "correction" | "image"
+  "transcription" | "synthese" | "fiche" | "correction" | "image"
 > = {
+  transcription_brute: "transcription",
   synthese: "synthese",
   fiche: "fiche",
   transcription_corrigee: "correction",

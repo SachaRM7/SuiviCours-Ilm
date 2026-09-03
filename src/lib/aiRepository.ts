@@ -10,6 +10,11 @@ export type AiGenerationResult = {
   model: string;
 };
 
+export type AudioTranscriptionResult = {
+  text: string;
+  model: string;
+};
+
 const generatePipelineStep = httpsCallable<
   {
     provider: AiProvider;
@@ -20,6 +25,11 @@ const generatePipelineStep = httpsCallable<
   AiGenerationResult
 >(firebaseFunctions, "generatePipelineStep");
 
+const transcribeCourseAudio = httpsCallable<
+  { audioUrl: string; storagePath: string },
+  AudioTranscriptionResult
+>(firebaseFunctions, "transcribeCourseAudio");
+
 export async function generateWithAi(input: {
   provider: AiProvider;
   model: string;
@@ -27,6 +37,15 @@ export async function generateWithAi(input: {
   reasoningEffort?: AiReasoningEffort;
 }) {
   const response = await generatePipelineStep(input);
+
+  return response.data;
+}
+
+export async function transcribeWithAi(input: {
+  audioUrl: string;
+  storagePath: string;
+}) {
+  const response = await transcribeCourseAudio(input);
 
   return response.data;
 }

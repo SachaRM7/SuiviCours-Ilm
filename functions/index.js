@@ -1,5 +1,9 @@
 import { defineSecret } from "firebase-functions/params";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { initializeApp } from "firebase-admin/app";
+import { getStorage } from "firebase-admin/storage";
+
+initializeApp();
 
 const openaiApiKey = defineSecret("OPENAI_API_KEY");
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
@@ -23,6 +27,10 @@ const providerConfig = {
 
 const groqModels = new Set([providerConfig.groq.defaultModel]);
 const reasoningEfforts = new Set(["none", "low", "medium", "high"]);
+const audioBucket = "suivi-cours-ilm.firebasestorage.app";
+const maxFreeAudioSize = 25 * 1024 * 1024;
+const whisperModel = "whisper-large-v3";
+const whisperEndpoint = "https://api.groq.com/openai/v1/audio/transcriptions";
 
 function requireString(value, field) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -173,6 +181,74 @@ async function callGroq({ prompt, model, reasoningEffort }) {
   return outputText;
 }
 
+function validateCourseAudioUrl(audioUrl, storagePath) {
+  let parsed;
+
+  try {
+    parsed = new URL(audioUrl);
+  } catch {
+    throw new HttpsError("invalid-argument", "Adresse du fichier audio invalide.");
+  }
+
+  const expectedPrefix = `/v0/b/${audioBucket}/o/`;
+  if (
+    parsed.protocol !== "https:" ||
+    parsed.hostname !== "firebasestorage.googleapis.com" ||
+    !parsed.pathname.startsWith(expectedPrefix) ||
+    decodeURIComponent(parsed.pathname.slice(expectedPrefix.length)) !== storagePath ||
+    !storagePath.startsWith("professeurs/") ||
+    !storagePath.includes("/cours/") ||
+    !storagePath.includes("/audio/")
+  ) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Le fichier doit provenir de l'espace audio de ce cours.",
+    );
+  }
+}
+
+async function callGroqWhisper({ audioUrl }) {
+  const apiKey = groqApiKey.value();
+  if (!apiKey) {
+    throw new HttpsError(
+      "failed-precondition",
+      "GROQ_API_KEY n'est pas configuree.",
+    );
+  }
+
+  const response = await fetch(whisperEndpoint, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      url: audioUrl,
+      model: whisperModel,
+      language: "fr",
+      response_format: "json",
+      temperature: 0,
+      prompt:
+        "Cours de sciences islamiques principalement en francais, avec des mots, noms propres et notions en arabe. Transcrire fidelement le francais et conserver avec soin les termes arabes tels qu'ils sont prononces. Ne pas traduire, resumer ni commenter.",
+    }),
+  });
+  const body = await response.json();
+
+  if (!response.ok) {
+    throw new HttpsError(
+      response.status === 413 ? "invalid-argument" : "internal",
+      body.error?.message ?? "La transcription Groq a echoue.",
+    );
+  }
+
+  const text = body.text?.trim();
+  if (!text) {
+    throw new HttpsError("internal", "La transcription Groq est vide.");
+  }
+
+  return text;
+}
+
 export const generatePipelineStep = onCall(
   {
     region: "europe-west1",
@@ -210,5 +286,46 @@ export const generatePipelineStep = onCall(
     }
 
     return { text, provider, model };
+  },
+);
+
+export const transcribeCourseAudio = onCall(
+  {
+    region: "europe-west1",
+    timeoutSeconds: 540,
+    memory: "1GiB",
+    secrets: [groqApiKey, allowedUid],
+  },
+  async (request) => {
+    assertAllowed(request);
+
+    const audioUrl = requireString(request.data?.audioUrl, "audioUrl");
+    const storagePath = requireString(request.data?.storagePath, "storagePath");
+    validateCourseAudioUrl(audioUrl, storagePath);
+
+    let metadata;
+    try {
+      [metadata] = await getStorage()
+        .bucket(audioBucket)
+        .file(storagePath)
+        .getMetadata();
+    } catch {
+      throw new HttpsError("not-found", "Le fichier audio est introuvable.");
+    }
+
+    const size = Number(metadata.size ?? 0);
+    if (!Number.isFinite(size) || size <= 0 || size > maxFreeAudioSize) {
+      throw new HttpsError(
+        "invalid-argument",
+        "Le Free Tier Groq accepte au maximum 25 Mo par fichier audio.",
+      );
+    }
+
+    if (!metadata.contentType?.startsWith("audio/")) {
+      throw new HttpsError("invalid-argument", "Le fichier depose n'est pas un audio.");
+    }
+
+    const text = await callGroqWhisper({ audioUrl });
+    return { text, model: whisperModel };
   },
 );

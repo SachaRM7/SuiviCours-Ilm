@@ -48,12 +48,14 @@ export type Course = {
   titreValide: boolean;
   date: string;
   audioUrl: string | null;
+  audioStoragePath: string | null;
   etapes: Record<StepKey, CourseStep>;
   createdAt: string;
   updatedAt: string;
 };
 
 export type ArtifactType =
+  | "transcription_brute"
   | "transcription_corrigee"
   | "synthese"
   | "fiche"

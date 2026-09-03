@@ -1,17 +1,19 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAsync } from "../hooks/useAsync";
-import { generateWithAi } from "../lib/aiRepository";
+import { generateWithAi, transcribeWithAi } from "../lib/aiRepository";
 import { getCloudState, saveCloudState } from "../lib/cloudStateRepository";
 import {
   getCourseArtifactsByPath,
   getCourseContext,
   markStepDone,
   restartStep,
+  saveCourseAudio,
   saveArtifact,
   saveDetectedReferences,
   updateCourseTitle,
   upsertVocabularyTerms,
+  validateAudioFile,
 } from "../lib/libraryRepository";
 import {
   parseGlossaryTerms,
@@ -110,10 +112,11 @@ const steps: StepDefinition[] = [
     key: "transcription",
     promptStep: "transcription",
     title: "Transcription",
-    description:
-      "Transcrire l'audio dans Notebook Gemini, ou marquer fait si tu as déjà la transcription corrigée.",
-    supportHint: "À joindre dans Notebook Gemini : le fichier audio du cours.",
-    destination: "Notebook Gemini",
+    description: "Déposer l'audio puis obtenir sa transcription automatique.",
+    supportHint:
+      "Fichier m4a, mp3 ou wav de 25 Mo maximum pour le Free Tier Groq.",
+    resultArtifactType: "transcription_brute",
+    destination: "Groq · Whisper Large V3",
   },
   {
     key: "correction",
@@ -121,8 +124,9 @@ const steps: StepDefinition[] = [
     title: "Correction",
     description: "Nettoyer les termes et produire la transcription corrigée.",
     supportHint:
-      "À joindre au prompt : la transcription brute produite par Notebook Gemini.",
+      "La transcription brute enregistrée à l'étape précédente est jointe automatiquement.",
     resultArtifactType: "transcription_corrigee",
+    sourceArtifactType: "transcription_brute",
     destination: "IA",
     recommendedModelId: "qwen",
     reasoningEffort: "low",
@@ -205,6 +209,10 @@ function formatDate(value: string | null) {
 }
 
 function pastePlaceholder(step: StepDefinition) {
+  if (step.key === "transcription") {
+    return "La transcription apparaîtra ici. Tu pourras la relire et la corriger avant de l'enregistrer.";
+  }
+
   if (step.key === "sources") {
     return "Colle ici la réponse Claude de recherche des sources. L'app extraira les références, puis ouvrira l'écran de validation.";
   }
@@ -268,6 +276,10 @@ export function TreatmentPage() {
     "loading" | "saving" | "saved" | "error"
   >("loading");
   const [notice, setNotice] = useState<string | null>(null);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [audioBusy, setAudioBusy] = useState<"upload" | "transcribe" | null>(
+    null,
+  );
 
   useEffect(() => {
     let active = true;
@@ -499,6 +511,79 @@ export function TreatmentPage() {
       );
     } finally {
       setAiStep(null);
+    }
+  }
+
+  async function runAudioTranscription(audio: {
+    url: string;
+    storagePath: string;
+  }) {
+    setAudioBusy("transcribe");
+    const transcription = await transcribeWithAi({
+      audioUrl: audio.url,
+      storagePath: audio.storagePath,
+    });
+    setResults((current) => ({
+      ...current,
+      transcription: transcription.text,
+    }));
+    setNotice(
+      "Transcription terminée avec Whisper Large V3. Relis-la puis enregistre.",
+    );
+  }
+
+  async function handleUploadAndTranscribe() {
+    if (!data || !audioFile) {
+      return;
+    }
+
+    setNotice(null);
+    setAiError(null);
+    setAudioBusy("upload");
+
+    try {
+      validateAudioFile(audioFile);
+      const audio = await saveCourseAudio({
+        professorId: data.professor.id,
+        moduleId: data.module.id,
+        courseId: data.course.id,
+        file: audioFile,
+      });
+      setAudioFile(null);
+      setReloadKey((key) => key + 1);
+      await runAudioTranscription(audio);
+    } catch (reason) {
+      setAiError(
+        reason instanceof Error
+          ? reason.message
+          : "Impossible d'importer ou de transcrire cet audio.",
+      );
+    } finally {
+      setAudioBusy(null);
+    }
+  }
+
+  async function handleTranscribeStoredAudio() {
+    if (!data?.course.audioUrl || !data.course.audioStoragePath) {
+      setAiError("Dépose d'abord le fichier audio du cours.");
+      return;
+    }
+
+    setNotice(null);
+    setAiError(null);
+    try {
+      await runAudioTranscription({
+        url: data.course.audioUrl,
+        storagePath: data.course.audioStoragePath,
+      });
+    } catch (reason) {
+      setAiError(
+        reason instanceof Error
+          ? reason.message
+          : "La transcription audio a échoué.",
+      );
+    } finally {
+      setAudioBusy(null);
     }
   }
 
@@ -820,6 +905,92 @@ export function TreatmentPage() {
                     <strong>Support à joindre</strong>
                     <span>{step.supportHint}</span>
                   </div>
+                  {step.key === "transcription" && canPrepareStep ? (
+                    <div className="transcription-audio">
+                      <label className="audio-drop">
+                        <input
+                          accept=".m4a,.mp3,.wav,audio/mpeg,audio/mp4,audio/x-m4a,audio/wav,audio/x-wav"
+                          disabled={audioBusy !== null}
+                          onChange={(event) => {
+                            const file = event.target.files?.[0] ?? null;
+                            setAiError(null);
+
+                            if (!file) {
+                              setAudioFile(null);
+                              return;
+                            }
+
+                            try {
+                              validateAudioFile(file);
+                              setAudioFile(file);
+                            } catch (reason) {
+                              event.target.value = "";
+                              setAudioFile(null);
+                              setAiError(
+                                reason instanceof Error
+                                  ? reason.message
+                                  : "Fichier audio invalide.",
+                              );
+                            }
+                          }}
+                          type="file"
+                        />
+                        <span className="audio-drop__icon" aria-hidden="true">
+                          ♪
+                        </span>
+                        <span>
+                          <strong>
+                            {audioFile
+                              ? audioFile.name
+                              : data.course.audioUrl
+                                ? "Remplacer le fichier audio"
+                                : "Choisir le fichier audio"}
+                          </strong>
+                          <small>m4a, mp3 ou wav · 25 Mo maximum</small>
+                        </span>
+                      </label>
+
+                      {data.course.audioUrl ? (
+                        <audio
+                          className="transcription-audio__player"
+                          controls
+                          preload="metadata"
+                          src={data.course.audioUrl}
+                        />
+                      ) : null}
+
+                      <div className="transcription-audio__actions">
+                        {audioFile ? (
+                          <button
+                            className="button button--primary"
+                            disabled={audioBusy !== null}
+                            onClick={handleUploadAndTranscribe}
+                            type="button"
+                          >
+                            {audioBusy === "upload"
+                              ? "Import de l'audio..."
+                              : audioBusy === "transcribe"
+                                ? "Transcription en cours..."
+                                : "Importer et transcrire"}
+                          </button>
+                        ) : data.course.audioUrl ? (
+                          <button
+                            className="button button--primary"
+                            disabled={audioBusy !== null}
+                            onClick={handleTranscribeStoredAudio}
+                            type="button"
+                          >
+                            {audioBusy
+                              ? "Transcription en cours..."
+                              : "Transcrire l'audio"}
+                          </button>
+                        ) : null}
+                      </div>
+                      <p className="transcription-audio__note">
+                        Français principal, avec préservation attentive des termes arabes.
+                      </p>
+                    </div>
+                  ) : null}
                   {step.recommendedModelId && canPrepareStep ? (
                     <div
                       aria-label={`Modèle IA pour ${step.title}`}
@@ -856,7 +1027,7 @@ export function TreatmentPage() {
                     </div>
                   ) : null}
                   <div className="step-actions">
-                    {canPrepareStep ? (
+                    {canPrepareStep && step.key !== "transcription" ? (
                       <button
                         className="tool"
                         onClick={() => handleCopyPrompt(step)}
@@ -874,7 +1045,7 @@ export function TreatmentPage() {
                         Copier le support
                       </button>
                     ) : null}
-                    {canPrepareStep ? (
+                    {canPrepareStep && step.key !== "transcription" ? (
                       <button
                         className="tool"
                         onClick={() => handleShowPrompt(step)}

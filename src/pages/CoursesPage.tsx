@@ -71,6 +71,7 @@ async function loadCourses() {
 
 function availableDocuments(artifacts: Artifact[]) {
   const labels: Record<Artifact["type"], string> = {
+    transcription_brute: "Transcription brute",
     synthese: "Synthèse",
     fiche: "Fiche",
     transcription_corrigee: "Transcription",

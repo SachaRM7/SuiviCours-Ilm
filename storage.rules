@@ -8,7 +8,7 @@ service firebase.storage {
     }
 
     function isAcceptedAudio() {
-      return request.resource.size <= 200 * 1024 * 1024
+      return request.resource.size <= 25 * 1024 * 1024
         && request.resource.contentType in [
           "audio/mpeg",
           "audio/mp3",

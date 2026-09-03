@@ -403,7 +403,7 @@ export function NewCoursePage() {
                   {audioFile ? audioFile.name : "Déposer le fichier audio"}
                 </strong>
                 <small>
-                  Facultatif · stockage seul · m4a, mp3 ou wav · 200 Mo max
+                  Facultatif · prêt pour la transcription IA · 25 Mo max
                 </small>
               </span>
             </label>
