@@ -3,6 +3,11 @@ import ReactMarkdown from "react-markdown";
 import { useNavigate, useParams } from "react-router-dom";
 import remarkGfm from "remark-gfm";
 import { useAsync } from "../hooks/useAsync";
+import {
+  clearCloudState,
+  getCloudState,
+  saveCloudState,
+} from "../lib/cloudStateRepository";
 import { getArtifactEditorData, saveArtifact } from "../lib/libraryRepository";
 import type { ArtifactType } from "../types/domain";
 
@@ -27,12 +32,53 @@ export function ArtifactEditorPage() {
   const { data, error, loading } = useAsync(load);
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
+  const [draftReady, setDraftReady] = useState(false);
   const originalContent = data?.artifact?.contenu ?? "";
   const dirty = content !== originalContent;
+  const draftKey = courseId ? `artifact-${courseId}-${artifactType}` : "";
 
   useEffect(() => {
-    setContent(data?.artifact?.contenu ?? "");
-  }, [data?.artifact?.contenu]);
+    let active = true;
+
+    if (!data || !draftKey) {
+      return () => {
+        active = false;
+      };
+    }
+
+    setDraftReady(false);
+    getCloudState<{ content: string }>(draftKey)
+      .then((draft) => {
+        if (active) {
+          setContent(draft?.content ?? originalContent);
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) {
+          setDraftReady(true);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [data, draftKey, originalContent]);
+
+  useEffect(() => {
+    if (!draftReady || !draftKey) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      const operation = dirty
+        ? saveCloudState(draftKey, { content })
+        : clearCloudState(draftKey);
+      void operation.catch(() => undefined);
+    }, 1000);
+
+    return () => window.clearTimeout(timeout);
+  }, [content, dirty, draftKey, draftReady]);
 
   useEffect(() => {
     if (!dirty || saving) {
@@ -63,6 +109,7 @@ export function ArtifactEditorPage() {
         type: artifactType,
         contenu: content,
       });
+      await clearCloudState(draftKey);
       navigate(`/cours/${courseId}/${artifactType}`);
     } finally {
       setSaving(false);
@@ -89,7 +136,8 @@ export function ArtifactEditorPage() {
           <p className="eyebrow">Édition markdown</p>
           <h1 className="page-title">{labels[artifactType]}</h1>
           <p className="lede">
-            {data.module.nom} · Cours {data.course.numero} · aperçu en direct
+            {data.module.nom} · Cours {data.course.numero} · aperçu en direct ·
+            brouillon synchronisé
           </p>
         </div>
         <div className="library-count">
@@ -122,7 +170,7 @@ export function ArtifactEditorPage() {
         </button>
         <button
           className="button"
-          onClick={() => {
+          onClick={async () => {
             if (
               dirty &&
               !window.confirm("Quitter l'éditeur sans enregistrer les modifications ?")
@@ -130,6 +178,7 @@ export function ArtifactEditorPage() {
               return;
             }
 
+            await clearCloudState(draftKey);
             navigate(`/cours/${data.course.id}/${artifactType}`);
           }}
           type="button"

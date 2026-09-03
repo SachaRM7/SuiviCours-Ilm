@@ -1,6 +1,11 @@
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAsync } from "../hooks/useAsync";
+import {
+  clearCloudState,
+  getCloudState,
+  saveCloudState,
+} from "../lib/cloudStateRepository";
 import { getArtifactEditorData, saveCourseImage } from "../lib/libraryRepository";
 
 export function ImageUploadPage() {
@@ -17,7 +22,51 @@ export function ImageUploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [prompt, setPrompt] = useState("");
   const [saving, setSaving] = useState(false);
+  const [draftReady, setDraftReady] = useState(false);
   const dirty = Boolean(file) || prompt.trim().length > 0;
+  const draftKey = courseId ? `image-upload-${courseId}` : "";
+
+  useEffect(() => {
+    let active = true;
+
+    if (!draftKey) {
+      return () => {
+        active = false;
+      };
+    }
+
+    getCloudState<{ prompt: string }>(draftKey)
+      .then((draft) => {
+        if (active && draft) {
+          setPrompt(draft.prompt);
+        }
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) {
+          setDraftReady(true);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [draftKey]);
+
+  useEffect(() => {
+    if (!draftReady || !draftKey) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      const operation = prompt.trim()
+        ? saveCloudState(draftKey, { prompt })
+        : clearCloudState(draftKey);
+      void operation.catch(() => undefined);
+    }, 1000);
+
+    return () => window.clearTimeout(timeout);
+  }, [draftKey, draftReady, prompt]);
 
   useEffect(() => {
     if (!dirty || saving) {
@@ -48,6 +97,7 @@ export function ImageUploadPage() {
         file,
         promptUtilise: prompt || data.artifact?.contenu || "",
       });
+      await clearCloudState(draftKey);
       navigate(`/images/${courseId}/${imageId}`);
     } finally {
       setSaving(false);
@@ -72,7 +122,7 @@ export function ImageUploadPage() {
       <div>
         <h1 className="page-title">Ajouter une fiche image</h1>
         <p className="lede">
-          {data.module.nom} · Cours {data.course.numero}
+          {data.module.nom} · Cours {data.course.numero} · prompt synchronisé
         </p>
       </div>
 

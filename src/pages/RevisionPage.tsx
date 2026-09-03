@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAsync } from "../hooks/useAsync";
+import { getCloudState, saveCloudState } from "../lib/cloudStateRepository";
 import {
   getCourseArtifactsByPath,
   listCoursesForModule,
@@ -51,6 +52,12 @@ type FicheContext = {
   module: CourseModule;
   course: Course;
   contenu: string;
+};
+
+type RevisionCloudState = {
+  mode: "tout" | "vocabulaire" | "fiche" | "aRevoir";
+  index: number;
+  flipped: boolean;
 };
 
 function cleanMarkdown(value: string) {
@@ -165,6 +172,9 @@ export function RevisionPage() {
   const [flipped, setFlipped] = useState(false);
   const [localMarked, setLocalMarked] = useState<Set<string>>(new Set());
   const [localCleared, setLocalCleared] = useState<Set<string>>(new Set());
+  const [pendingCloudState, setPendingCloudState] =
+    useState<RevisionCloudState | null>(null);
+  const [cloudStateReady, setCloudStateReady] = useState(false);
   const marked = useMemo(() => {
     const next = new Set(
       (data?.reviewMarks ?? [])
@@ -198,9 +208,66 @@ export function RevisionPage() {
   const current = cards[index] ?? null;
 
   useEffect(() => {
+    let active = true;
+    let found = false;
+
+    getCloudState<RevisionCloudState>("revision")
+      .then((saved) => {
+        if (!active || !saved) {
+          return;
+        }
+
+        found = true;
+        setMode(saved.mode);
+        setPendingCloudState(saved);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active && !found) {
+          setCloudStateReady(true);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!pendingCloudState || !data) {
+      return;
+    }
+
+    setIndex(Math.min(pendingCloudState.index, Math.max(cards.length - 1, 0)));
+    setFlipped(pendingCloudState.flipped);
+    setPendingCloudState(null);
+    setCloudStateReady(true);
+  }, [cards.length, data, pendingCloudState]);
+
+  useEffect(() => {
+    if (!cloudStateReady) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void saveCloudState<RevisionCloudState>("revision", {
+        mode,
+        index,
+        flipped,
+      }).catch(() => undefined);
+    }, 600);
+
+    return () => window.clearTimeout(timeout);
+  }, [cloudStateReady, flipped, index, mode]);
+
+  useEffect(() => {
+    if (pendingCloudState) {
+      return;
+    }
+
     setIndex(0);
     setFlipped(false);
-  }, [mode]);
+  }, [mode, pendingCloudState]);
 
   useEffect(() => {
     if (index >= cards.length) {

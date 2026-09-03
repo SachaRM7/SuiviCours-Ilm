@@ -2,6 +2,11 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAsync } from "../hooks/useAsync";
 import {
+  clearCloudState,
+  getCloudState,
+  saveCloudState,
+} from "../lib/cloudStateRepository";
+import {
   createCourse,
   listProfessorsWithModules,
   validateAudioFile,
@@ -51,6 +56,16 @@ function findDefaultModule(professors: ProfessorWithModules[]) {
   );
 }
 
+type NewCourseDraft = {
+  professorId: string;
+  moduleId: string;
+  numero: number;
+  date: string;
+  time: string;
+  titre: string;
+  showForm: boolean;
+};
+
 export function NewCoursePage() {
   const navigate = useNavigate();
   const load = useCallback(() => listProfessorsWithModules(), []);
@@ -66,6 +81,56 @@ export function NewCoursePage() {
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [draftReady, setDraftReady] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+
+    getCloudState<NewCourseDraft>("new-course")
+      .then((draft) => {
+        if (!active || !draft) {
+          return;
+        }
+
+        setProfessorId(draft.professorId);
+        setModuleId(draft.moduleId);
+        setNumero(draft.numero);
+        setDate(draft.date);
+        setTime(draft.time);
+        setTitre(draft.titre);
+        setShowForm(draft.showForm);
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) {
+          setDraftReady(true);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!draftReady) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void saveCloudState<NewCourseDraft>("new-course", {
+        professorId,
+        moduleId,
+        numero,
+        date,
+        time,
+        titre,
+        showForm,
+      }).catch(() => undefined);
+    }, 1000);
+
+    return () => window.clearTimeout(timeout);
+  }, [date, draftReady, moduleId, numero, professorId, showForm, time, titre]);
 
   useEffect(() => {
     if (!suggestion || professorId || moduleId) {
@@ -113,6 +178,7 @@ export function NewCoursePage() {
         date: `${date}T${time || "00:00"}:00`,
         audioFile: input?.quick ? null : audioFile,
       });
+      await clearCloudState("new-course");
       navigate(`/cours/${courseId}/traitement`);
     } catch (reason) {
       setMessage(

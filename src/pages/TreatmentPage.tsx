@@ -1,7 +1,8 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAsync } from "../hooks/useAsync";
 import { generateWithAi } from "../lib/aiRepository";
+import { getCloudState, saveCloudState } from "../lib/cloudStateRepository";
 import {
   getCourseArtifactsByPath,
   getCourseContext,
@@ -56,6 +57,22 @@ type PromptFallback = {
   title: string;
   payload: string;
 };
+
+type TreatmentCloudDraft = {
+  results: Record<StepKey, string>;
+  selectedAiModels: Partial<Record<StepKey, AiModelId>>;
+};
+
+function emptyResults(): Record<StepKey, string> {
+  return {
+    transcription: "",
+    correction: "",
+    synthese: "",
+    sources: "",
+    fiche: "",
+    image: "",
+  };
+}
 
 const aiModelOptions: AiModelOption[] = [
   {
@@ -245,15 +262,70 @@ export function TreatmentPage() {
   const [promptFallback, setPromptFallback] = useState<PromptFallback | null>(
     null,
   );
-  const [results, setResults] = useState<Record<StepKey, string>>({
-    transcription: "",
-    correction: "",
-    synthese: "",
-    sources: "",
-    fiche: "",
-    image: "",
-  });
+  const [results, setResults] = useState<Record<StepKey, string>>(emptyResults);
+  const [draftReady, setDraftReady] = useState(false);
+  const [draftStatus, setDraftStatus] = useState<
+    "loading" | "saving" | "saved" | "error"
+  >("loading");
   const [notice, setNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    setDraftReady(false);
+    setDraftStatus("loading");
+    setResults(emptyResults());
+    setSelectedAiModels({});
+
+    if (!courseId) {
+      return () => {
+        active = false;
+      };
+    }
+
+    getCloudState<TreatmentCloudDraft>(`treatment-${courseId}`)
+      .then((draft) => {
+        if (!active || !draft) {
+          return;
+        }
+
+        setResults({ ...emptyResults(), ...draft.results });
+        setSelectedAiModels(draft.selectedAiModels ?? {});
+      })
+      .catch(() => {
+        if (active) {
+          setDraftStatus("error");
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setDraftReady(true);
+          setDraftStatus((current) => (current === "error" ? current : "saved"));
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [courseId]);
+
+  useEffect(() => {
+    if (!courseId || !draftReady) {
+      return;
+    }
+
+    setDraftStatus("saving");
+    const timeout = window.setTimeout(() => {
+      void saveCloudState<TreatmentCloudDraft>(`treatment-${courseId}`, {
+        results,
+        selectedAiModels,
+      })
+        .then(() => setDraftStatus("saved"))
+        .catch(() => setDraftStatus("error"));
+    }, 1000);
+
+    return () => window.clearTimeout(timeout);
+  }, [courseId, draftReady, results, selectedAiModels]);
   const load = useCallback(async () => {
     void reloadKey;
     if (!courseId) {
@@ -639,6 +711,16 @@ export function TreatmentPage() {
           </a>
         ) : null}
       </header>
+
+      <p className="cloud-sync-state" aria-live="polite">
+        {draftStatus === "loading"
+          ? "Récupération du brouillon..."
+          : draftStatus === "saving"
+            ? "Synchronisation..."
+            : draftStatus === "error"
+              ? "Synchronisation indisponible"
+            : "Brouillon synchronisé"}
+      </p>
 
       {notice ? (
         <div aria-live="polite" className="empty-state notice-state">
