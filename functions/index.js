@@ -47,7 +47,7 @@ function assertAllowed(context) {
     throw new HttpsError("unauthenticated", "Connexion requise.");
   }
 
-  const expectedUid = allowedUid.value();
+  const expectedUid = allowedUid.value().trim();
   if (expectedUid && uid !== expectedUid) {
     throw new HttpsError("permission-denied", "Compte non autorisé.");
   }
@@ -139,7 +139,7 @@ async function callAnthropic({ prompt, model }) {
 }
 
 async function callGroq({ prompt, model, reasoningEffort }) {
-  const apiKey = groqApiKey.value();
+  const apiKey = groqApiKey.value().trim();
   if (!apiKey) {
     throw new HttpsError(
       "failed-precondition",
@@ -208,7 +208,7 @@ function validateCourseAudioUrl(audioUrl, storagePath) {
 }
 
 async function callGroqWhisper({ audioBuffer, contentType, fileName }) {
-  const apiKey = groqApiKey.value();
+  const apiKey = groqApiKey.value().trim();
   if (!apiKey) {
     throw new HttpsError(
       "failed-precondition",
