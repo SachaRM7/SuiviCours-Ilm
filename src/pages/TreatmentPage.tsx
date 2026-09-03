@@ -1092,6 +1092,17 @@ export function TreatmentPage() {
                           </button>
                         ) : null}
                       </div>
+                      {audioBusy === "transcribe" ? (
+                        <p className="audio-operation" aria-live="polite">
+                          Whisper transcrit la partie {audioProgress.current} sur {audioProgress.total}.
+                          Garde cette page ouverte jusqu'à la fin.
+                        </p>
+                      ) : null}
+                      {aiError ? (
+                        <p className="form-error audio-operation" role="alert">
+                          {aiError}
+                        </p>
+                      ) : null}
                       <p className="transcription-audio__note">
                         Les parties sont transcrites dans cet ordre et assemblées en un texte continu.
                       </p>

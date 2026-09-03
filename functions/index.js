@@ -207,7 +207,7 @@ function validateCourseAudioUrl(audioUrl, storagePath) {
   }
 }
 
-async function callGroqWhisper({ audioUrl }) {
+async function callGroqWhisper({ audioBuffer, contentType, fileName }) {
   const apiKey = groqApiKey.value();
   if (!apiKey) {
     throw new HttpsError(
@@ -216,27 +216,33 @@ async function callGroqWhisper({ audioUrl }) {
     );
   }
 
+  const form = new FormData();
+  form.append("file", new Blob([audioBuffer], { type: contentType }), fileName);
+  form.append("model", whisperModel);
+  form.append("language", "fr");
+  form.append("response_format", "json");
+  form.append("temperature", "0");
+  form.append(
+    "prompt",
+    "Cours de sciences islamiques principalement en francais, avec des mots, noms propres et notions en arabe. Transcrire fidelement le francais et conserver avec soin les termes arabes tels qu'ils sont prononces. Ne pas traduire, resumer ni commenter.",
+  );
+
   const response = await fetch(whisperEndpoint, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      url: audioUrl,
-      model: whisperModel,
-      language: "fr",
-      response_format: "json",
-      temperature: 0,
-      prompt:
-        "Cours de sciences islamiques principalement en francais, avec des mots, noms propres et notions en arabe. Transcrire fidelement le francais et conserver avec soin les termes arabes tels qu'ils sont prononces. Ne pas traduire, resumer ni commenter.",
-    }),
+    body: form,
   });
   const body = await response.json();
 
   if (!response.ok) {
+    console.error("Groq Whisper request failed", {
+      status: response.status,
+      message: body.error?.message,
+    });
     throw new HttpsError(
-      response.status === 413 ? "invalid-argument" : "internal",
+      response.status === 413 ? "invalid-argument" : "failed-precondition",
       body.error?.message ?? "La transcription Groq a echoue.",
     );
   }
@@ -303,12 +309,10 @@ export const transcribeCourseAudio = onCall(
     const storagePath = requireString(request.data?.storagePath, "storagePath");
     validateCourseAudioUrl(audioUrl, storagePath);
 
+    const storedFile = getStorage().bucket(audioBucket).file(storagePath);
     let metadata;
     try {
-      [metadata] = await getStorage()
-        .bucket(audioBucket)
-        .file(storagePath)
-        .getMetadata();
+      [metadata] = await storedFile.getMetadata();
     } catch {
       throw new HttpsError("not-found", "Le fichier audio est introuvable.");
     }
@@ -325,7 +329,19 @@ export const transcribeCourseAudio = onCall(
       throw new HttpsError("invalid-argument", "Le fichier depose n'est pas un audio.");
     }
 
-    const text = await callGroqWhisper({ audioUrl });
+    let audioBuffer;
+    try {
+      [audioBuffer] = await storedFile.download();
+    } catch (error) {
+      console.error("Course audio download failed", error);
+      throw new HttpsError("internal", "Impossible de lire le fichier audio stocke.");
+    }
+
+    const text = await callGroqWhisper({
+      audioBuffer,
+      contentType: metadata.contentType,
+      fileName: storagePath.split("/").pop() ?? "cours-audio.mp3",
+    });
     return { text, model: whisperModel };
   },
 );

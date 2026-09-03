@@ -3959,6 +3959,21 @@ summary {
   font-size: 13px;
 }
 
+.audio-operation {
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--gold);
+  background: var(--cream);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.audio-operation.form-error {
+  border-left-color: var(--bordeaux);
+  color: var(--bordeaux);
+}
+
 .audio-parts {
   display: grid;
   margin: 0;
