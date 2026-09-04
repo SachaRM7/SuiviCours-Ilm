@@ -5003,3 +5003,46 @@ summary {
     text-decoration: none;
   }
 }
+
+.ai-job-indicator {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #b8d3d1;
+  border-radius: 6px;
+  background: #e3ece9;
+  color: #0e626a;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 6px 10px;
+  white-space: nowrap;
+}
+
+.ai-job-indicator span {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 50%;
+  background: #0e6b75;
+  color: white;
+  font-size: 11px;
+}
+
+.ai-job-indicator--ready {
+  border-color: var(--gold-pale);
+  background: #f4ead9;
+  color: var(--green);
+}
+
+.ai-job-indicator--ready span {
+  background: var(--green);
+}
+
+@media (max-width: 640px) {
+  .ai-job-indicator {
+    min-height: 32px;
+    padding: 5px 8px;
+  }
+}

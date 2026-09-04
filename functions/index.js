@@ -1,9 +1,13 @@
 import { defineSecret } from "firebase-functions/params";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
+import { onTaskDispatched } from "firebase-functions/v2/tasks";
 import { initializeApp } from "firebase-admin/app";
+import { FieldValue, getFirestore } from "firebase-admin/firestore";
+import { getFunctions } from "firebase-admin/functions";
 import { getStorage } from "firebase-admin/storage";
 
 initializeApp();
+const firestore = getFirestore();
 
 const openaiApiKey = defineSecret("OPENAI_API_KEY");
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
@@ -32,8 +36,10 @@ const maxFreeAudioSize = 25 * 1024 * 1024;
 const whisperModel = "whisper-large-v3";
 const whisperEndpoint = "https://api.groq.com/openai/v1/audio/transcriptions";
 const sourceMarker = "\n\n---\n\nCONTENU SOURCE\n\n";
-const groqChunkTargetCharacters = 18000;
+const groqChunkTargetCharacters = 8000;
+const groqCorrectionChunkCharacters = 2600;
 const groqChunkDelayMs = 61000;
+const pipelineTasks = new Set(["correction", "synthese", "sources", "fiche", "image"]);
 
 function requireString(value, field) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -197,7 +203,7 @@ async function callGroqRequest({ apiKey, prompt, model, reasoningEffort, part })
       body: JSON.stringify({
         model,
         messages: [{ role: "user", content: prompt }],
-        max_completion_tokens: 16384,
+        max_completion_tokens: 1000,
         reasoning_effort: reasoningEffort,
       }),
     });
@@ -274,10 +280,7 @@ async function callGroq({ prompt, model, reasoningEffort, task }) {
   const source = prompt.slice(markerIndex + sourceMarker.length);
   const segmentDirective =
     "\n\nMODE SEGMENT : corrige uniquement le segment fourni. Retourne seulement le texte corrige, sans titre, sans introduction, sans conclusion, sans liste de termes et sans commentaire. Ne resume rien.\n";
-  const maxSourceCharacters = Math.max(
-    4000,
-    groqChunkTargetCharacters - instructions.length - segmentDirective.length - sourceMarker.length,
-  );
+  const maxSourceCharacters = groqCorrectionChunkCharacters;
   const sourceChunks = splitSourceText(source, maxSourceCharacters);
   const correctedChunks = [];
 
@@ -308,6 +311,43 @@ async function callGroq({ prompt, model, reasoningEffort, task }) {
   return correctedChunks.join("\n\n");
 }
 
+function normalizeGenerationRequest(data) {
+  const provider = requireString(data?.provider, "provider");
+  const prompt = requireString(data?.prompt, "prompt");
+  const config = providerConfig[provider];
+
+  if (!config) {
+    throw new HttpsError("invalid-argument", "Provider IA inconnu.");
+  }
+
+  const model =
+    typeof data?.model === "string" && data.model.trim()
+      ? data.model.trim()
+      : config.defaultModel;
+  const requestedReasoningEffort = data?.reasoningEffort;
+  const reasoningEffort = reasoningEfforts.has(requestedReasoningEffort)
+    ? requestedReasoningEffort
+    : "medium";
+  const task = typeof data?.task === "string" ? data.task.trim() : "";
+
+  return { provider, prompt, model, reasoningEffort, task };
+}
+
+async function runGeneration(data) {
+  const { provider, prompt, model, reasoningEffort, task } =
+    normalizeGenerationRequest(data);
+  let text;
+
+  if (provider === "openai") {
+    text = await callOpenAI({ prompt, model });
+  } else if (provider === "anthropic") {
+    text = await callAnthropic({ prompt, model });
+  } else {
+    text = await callGroq({ prompt, model, reasoningEffort, task });
+  }
+
+  return { text, provider, model };
+}
 function validateCourseAudioUrl(audioUrl, storagePath) {
   let parsed;
 
@@ -391,39 +431,157 @@ export const generatePipelineStep = onCall(
   },
   async (request) => {
     assertAllowed(request);
-
-    const provider = requireString(request.data?.provider, "provider");
-    const prompt = requireString(request.data?.prompt, "prompt");
-    const config = providerConfig[provider];
-
-    if (!config) {
-      throw new HttpsError("invalid-argument", "Provider IA inconnu.");
-    }
-
-    const model =
-      typeof request.data?.model === "string" && request.data.model.trim()
-        ? request.data.model.trim()
-        : config.defaultModel;
-    const requestedReasoningEffort = request.data?.reasoningEffort;
-    const task =
-      typeof request.data?.task === "string" ? request.data.task.trim() : "";
-    const reasoningEffort = reasoningEfforts.has(requestedReasoningEffort)
-      ? requestedReasoningEffort
-      : "medium";
-
-    let text;
-    if (provider === "openai") {
-      text = await callOpenAI({ prompt, model });
-    } else if (provider === "anthropic") {
-      text = await callAnthropic({ prompt, model });
-    } else {
-      text = await callGroq({ prompt, model, reasoningEffort, task });
-    }
-
-    return { text, provider, model };
+    return runGeneration(request.data);
   },
 );
 
+export const startPipelineJob = onCall(
+  {
+    region: "europe-west1",
+    timeoutSeconds: 60,
+    memory: "256MiB",
+    secrets: [allowedUid],
+  },
+  async (request) => {
+    assertAllowed(request);
+    const generation = normalizeGenerationRequest(request.data);
+    const courseId = requireString(request.data?.courseId, "courseId");
+    const courseTitle = requireString(request.data?.courseTitle, "courseTitle");
+    const stepTitle = requireString(request.data?.stepTitle, "stepTitle");
+
+    if (!pipelineTasks.has(generation.task)) {
+      throw new HttpsError("invalid-argument", "Etape IA inconnue.");
+    }
+
+    const uid = request.auth.uid;
+    const jobRef = firestore
+      .collection("users")
+      .doc(uid)
+      .collection("aiJobs")
+      .doc();
+
+    await jobRef.set({
+      ...generation,
+      courseId,
+      courseTitle,
+      stepTitle,
+      status: "queued",
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    try {
+      const queue = getFunctions().taskQueue(
+        "locations/europe-west1/functions/processPipelineJob",
+      );
+      await queue.enqueue({ uid, jobId: jobRef.id });
+    } catch (error) {
+      console.error("Unable to enqueue pipeline job", error);
+      await jobRef.update({
+        status: "failed",
+        error: "Impossible d'ajouter la generation a la file d'attente.",
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      throw new HttpsError(
+        "internal",
+        "Impossible d'ajouter la generation a la file d'attente.",
+      );
+    }
+
+    return { jobId: jobRef.id };
+  },
+);
+
+export const processPipelineJob = onTaskDispatched(
+  {
+    region: "europe-west1",
+    timeoutSeconds: 1800,
+    memory: "1GiB",
+    retryConfig: { maxAttempts: 1 },
+    rateLimits: { maxConcurrentDispatches: 1 },
+    secrets: [openaiApiKey, anthropicApiKey, groqApiKey, allowedUid],
+  },
+  async (request) => {
+    const uid = requireString(request.data?.uid, "uid");
+    const jobId = requireString(request.data?.jobId, "jobId");
+    const jobRef = firestore
+      .collection("users")
+      .doc(uid)
+      .collection("aiJobs")
+      .doc(jobId);
+    const jobSnapshot = await jobRef.get();
+
+    if (!jobSnapshot.exists) return;
+
+    const job = jobSnapshot.data();
+    const expectedUid = allowedUid.value().trim();
+
+    if (expectedUid && uid !== expectedUid) {
+      await jobRef.update({
+        status: "failed",
+        error: "Compte non autorise.",
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    await jobRef.update({
+      status: "running",
+      startedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+
+    try {
+      const result = await runGeneration(job);
+      const draftRef = firestore
+        .collection("users")
+        .doc(uid)
+        .collection("appState")
+        .doc("treatment-" + job.courseId);
+
+      await firestore.runTransaction(async (transaction) => {
+        const draftSnapshot = await transaction.get(draftRef);
+        const currentValue = draftSnapshot.data()?.value ?? {};
+        const currentResults = currentValue.results ?? {};
+
+        transaction.set(
+          draftRef,
+          {
+            value: {
+              ...currentValue,
+              results: { ...currentResults, [job.task]: result.text },
+            },
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true },
+        );
+        transaction.update(jobRef, {
+          status: "completed",
+          text: result.text,
+          provider: result.provider,
+          model: result.model,
+          prompt: FieldValue.delete(),
+          completedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      });
+    } catch (error) {
+      console.error("Background pipeline job failed", {
+        jobId,
+        courseId: job.courseId,
+        task: job.task,
+        error,
+      });
+      await jobRef.update({
+        status: "failed",
+        error: error instanceof Error ? error.message : "La generation IA a echoue.",
+        prompt: FieldValue.delete(),
+        failedAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    }
+  },
+);
 export const transcribeCourseAudio = onCall(
   {
     region: "europe-west1",

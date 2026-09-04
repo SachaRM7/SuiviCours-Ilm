@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../features/auth/useAuth";
+import { useAiJobs } from "../hooks/useAiJobs";
 
 const navItems = [
   { to: "/", label: "Accueil", icon: "⌂" },
@@ -29,6 +30,14 @@ export function AppShell() {
   const location = useLocation();
   const label = activeSection(location.pathname);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const aiJobs = useAiJobs();
+  const activeAiJobs = aiJobs.filter(
+    (job) => job.status === "queued" || job.status === "running",
+  );
+  const readyAiJobs = aiJobs.filter(
+    (job) => job.status === "completed" && !job.acknowledgedAt,
+  );
+  const highlightedJob = readyAiJobs[0] ?? activeAiJobs[0];
 
   useEffect(() => {
     function allowsHorizontalGesture(target: EventTarget | null) {
@@ -124,6 +133,18 @@ export function AppShell() {
             <strong>{label}</strong>
           </div>
           <div className="topbar__actions">
+            {highlightedJob ? (
+              <Link
+                className={"ai-job-indicator" + (readyAiJobs.length ? " ai-job-indicator--ready" : "")}
+                to={"/cours/" + highlightedJob.courseId + "/traitement"}
+                title={highlightedJob.courseTitle + " · " + highlightedJob.stepTitle}
+              >
+                <span aria-hidden="true">{readyAiJobs.length ? "✓" : "···"}</span>
+                {readyAiJobs.length
+                  ? readyAiJobs.length + " résultat" + (readyAiJobs.length > 1 ? "s" : "")
+                  : activeAiJobs.length + " en cours"}
+              </Link>
+            ) : null}
             <span className="round-action">FR</span>
             <span className="round-action">!</span>
             <span className="round-action round-action--avatar">

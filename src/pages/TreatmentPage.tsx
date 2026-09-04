@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAsync } from "../hooks/useAsync";
-import { generateWithAi, transcribeWithAi } from "../lib/aiRepository";
+import { useAiJobs } from "../hooks/useAiJobs";
+import { transcribeWithAi } from "../lib/aiRepository";
+import { acknowledgeAiJob, queueAiGeneration } from "../lib/aiJobsRepository";
 import { getCloudState, saveCloudState } from "../lib/cloudStateRepository";
 import {
   getCourseArtifactsByPath,
@@ -265,7 +267,7 @@ export function TreatmentPage() {
   const { courseId } = useParams();
   const [reloadKey, setReloadKey] = useState(0);
   const [busyStep, setBusyStep] = useState<StepKey | null>(null);
-  const [aiStep, setAiStep] = useState<StepKey | null>(null);
+  const [queueingStep, setQueueingStep] = useState<StepKey | null>(null);
   const [selectedAiModels, setSelectedAiModels] = useState<
     Partial<Record<StepKey, AiModelId>>
   >({});
@@ -284,6 +286,8 @@ export function TreatmentPage() {
     null,
   );
   const [audioProgress, setAudioProgress] = useState({ current: 0, total: 0 });
+  const aiJobs = useAiJobs();
+  const handledJobIds = useRef(new Set<string>());
 
   useEffect(() => {
     let active = true;
@@ -342,6 +346,55 @@ export function TreatmentPage() {
 
     return () => window.clearTimeout(timeout);
   }, [courseId, draftReady, results, selectedAiModels]);
+  const courseAiJobs = useMemo(
+    () => aiJobs.filter((job) => job.courseId === courseId),
+    [aiJobs, courseId],
+  );
+
+  useEffect(() => {
+    if (!draftReady) return;
+
+    const unacknowledged = courseAiJobs.filter(
+      (job) => !job.acknowledgedAt && !handledJobIds.current.has(job.id),
+    );
+    if (!unacknowledged.length) return;
+
+    const completedSteps = new Set<StepKey>();
+    const completed = unacknowledged.filter((job) => job.status === "completed");
+    const failed = unacknowledged.filter((job) => job.status === "failed");
+
+    for (const job of completed) {
+      handledJobIds.current.add(job.id);
+      if (!completedSteps.has(job.step) && job.text) {
+        completedSteps.add(job.step);
+        setResults((current) => ({ ...current, [job.step]: job.text ?? "" }));
+        setNotice(
+          job.stepTitle + " terminée. Le résultat est prêt à être relu puis enregistré.",
+        );
+      }
+      void acknowledgeAiJob(job.id);
+    }
+
+    if (failed.length) {
+      setAiError(failed[0].error ?? "La génération IA a échoué.");
+      for (const job of failed) {
+        handledJobIds.current.add(job.id);
+        void acknowledgeAiJob(job.id);
+      }
+    }
+  }, [courseAiJobs, draftReady]);
+
+  function activeJobFor(step: StepKey) {
+    return courseAiJobs.find(
+      (job) =>
+        job.step === step &&
+        (job.status === "queued" || job.status === "running"),
+    );
+  }
+
+  function isStepGenerating(step: StepKey) {
+    return queueingStep === step || Boolean(activeJobFor(step));
+  }
   const load = useCallback(async () => {
     void reloadKey;
     if (!courseId) {
@@ -490,23 +543,28 @@ export function TreatmentPage() {
       return;
     }
 
-    setAiStep(step.key);
+    setQueueingStep(step.key);
     setNotice(null);
     setAiError(null);
 
     try {
       const prompt = await buildStepPrompt(step);
 
-      const result = await generateWithAi({
+      await queueAiGeneration({
         provider: selectedModel.provider,
         model: selectedModel.model,
         prompt,
         reasoningEffort: step.reasoningEffort,
         task: step.key,
+        courseId: data.course.id,
+        courseTitle: data.course.titre || "Cours " + data.course.numero,
+        stepTitle: step.title,
       });
-      setResults((current) => ({ ...current, [step.key]: result.text }));
       setNotice(
-        `${step.title} générée avec ${selectedModel.label}. Relis puis enregistre.`,
+        step.title +
+          " ajoutée à la file avec " +
+          selectedModel.label +
+          ". Tu peux naviguer librement ou fermer l'app.",
       );
     } catch (generationError) {
       setAiError(
@@ -515,10 +573,9 @@ export function TreatmentPage() {
           : "La génération IA a échoué. Vérifie la clé API, le quota ou le modèle choisi.",
       );
     } finally {
-      setAiStep(null);
+      setQueueingStep(null);
     }
   }
-
   async function runAudioTranscription(audioParts: CourseAudioPart[]) {
     setAudioBusy("transcribe");
     setAudioProgress({ current: 0, total: audioParts.length });
@@ -1175,11 +1232,11 @@ export function TreatmentPage() {
                     {selectedModel && canPrepareStep ? (
                       <button
                         className="tool on"
-                        disabled={aiStep === step.key}
+                        disabled={isStepGenerating(step.key)}
                         onClick={() => handleGenerateAi(step)}
                         type="button"
                       >
-                        {aiStep === step.key
+                        {isStepGenerating(step.key)
                           ? "Génération..."
                           : "Lancer la génération"}
                       </button>
@@ -1201,11 +1258,11 @@ export function TreatmentPage() {
                       </Link>
                     ) : null}
                   </div>
-                  {aiStep === step.key ? (
+                  {isStepGenerating(step.key) ? (
                     <p className="audio-operation" aria-live="polite">
-                      {step.key === "correction"
-                        ? "Correction longue en cours. L'app traite automatiquement le texte par segments ; cela peut prendre plusieurs minutes. Garde cette page ouverte."
-                        : `${step.title} en cours de génération. Garde cette page ouverte jusqu'à la fin.`}
+                      {activeJobFor(step.key)?.status === "queued"
+                        ? "En attente de traitement. Tu peux naviguer librement ou fermer l'app."
+                        : "Traitement en arrière-plan. Tu peux naviguer librement ou fermer l'app."}
                     </p>
                   ) : null}
                   {aiError && step.key !== "transcription" ? (
