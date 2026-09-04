@@ -1200,6 +1200,16 @@ export function TreatmentPage() {
                       </Link>
                     ) : null}
                   </div>
+                  {aiStep === step.key ? (
+                    <p className="audio-operation" aria-live="polite">
+                      {step.title} en cours de génération. Garde cette page ouverte jusqu'à la fin.
+                    </p>
+                  ) : null}
+                  {aiError && step.key !== "transcription" ? (
+                    <p className="form-error audio-operation" role="alert">
+                      {aiError}
+                    </p>
+                  ) : null}
                   {promptFallback?.stepKey === step.key ? (
                     <div className="prompt-fallback">
                       <div>

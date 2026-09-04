@@ -151,32 +151,62 @@ async function callGroq({ prompt, model, reasoningEffort }) {
     throw new HttpsError("invalid-argument", "Modele Groq non autorise.");
   }
 
-  const response = await fetch(providerConfig.groq.endpoint, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      messages: [{ role: "user", content: prompt }],
-      max_completion_tokens: 16384,
-      reasoning_effort: reasoningEffort,
-    }),
+  console.info("Groq generation started", {
+    model,
+    reasoningEffort,
+    promptCharacters: prompt.length,
   });
+  const startedAt = Date.now();
+  let response;
+  try {
+    response = await fetch(providerConfig.groq.endpoint, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content: prompt }],
+        max_completion_tokens: 16384,
+        reasoning_effort: reasoningEffort,
+      }),
+    });
+  } catch (error) {
+    console.error("Groq generation network failure", error);
+    throw new HttpsError(
+      "unavailable",
+      "Groq ne répond pas actuellement. Réessaie dans quelques instants.",
+    );
+  }
   const body = await response.json();
 
   if (!response.ok) {
+    console.error("Groq generation failed", {
+      status: response.status,
+      message: body.error?.message,
+      promptCharacters: prompt.length,
+    });
     throw new HttpsError(
-      "internal",
+      response.status === 429
+        ? "resource-exhausted"
+        : response.status === 413
+          ? "invalid-argument"
+          : "failed-precondition",
       body.error?.message ?? "Erreur Groq.",
     );
   }
 
   const outputText = body.choices?.[0]?.message?.content?.trim();
   if (!outputText) {
-    throw new HttpsError("internal", "Reponse Groq vide.");
+    throw new HttpsError("failed-precondition", "Reponse Groq vide.");
   }
+
+  console.info("Groq generation completed", {
+    model,
+    durationMs: Date.now() - startedAt,
+    outputCharacters: outputText.length,
+  });
 
   return outputText;
 }
