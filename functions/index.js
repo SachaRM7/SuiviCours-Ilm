@@ -31,6 +31,9 @@ const audioBucket = "suivi-cours-ilm.firebasestorage.app";
 const maxFreeAudioSize = 25 * 1024 * 1024;
 const whisperModel = "whisper-large-v3";
 const whisperEndpoint = "https://api.groq.com/openai/v1/audio/transcriptions";
+const sourceMarker = "\n\n---\n\nCONTENU SOURCE\n\n";
+const groqChunkTargetCharacters = 18000;
+const groqChunkDelayMs = 61000;
 
 function requireString(value, field) {
   if (typeof value !== "string" || value.trim().length === 0) {
@@ -138,23 +141,49 @@ async function callAnthropic({ prompt, model }) {
   return outputText;
 }
 
-async function callGroq({ prompt, model, reasoningEffort }) {
-  const apiKey = groqApiKey.value().trim();
-  if (!apiKey) {
-    throw new HttpsError(
-      "failed-precondition",
-      "GROQ_API_KEY n'est pas configuree.",
-    );
+function wait(delayMs) {
+  return new Promise((resolve) => setTimeout(resolve, delayMs));
+}
+
+function splitSourceText(source, maxCharacters) {
+  const chunks = [];
+  let remaining = source.trim();
+
+  while (remaining.length > maxCharacters) {
+    const window = remaining.slice(0, maxCharacters + 1);
+    const minimumBoundary = Math.floor(maxCharacters * 0.6);
+    let boundary = window.lastIndexOf("\n\n");
+
+    if (boundary < minimumBoundary) {
+      boundary = window.lastIndexOf(". ");
+      if (boundary >= minimumBoundary) {
+        boundary += 1;
+      }
+    }
+    if (boundary < minimumBoundary) {
+      boundary = window.lastIndexOf(" ");
+    }
+    if (boundary < minimumBoundary) {
+      boundary = maxCharacters;
+    }
+
+    chunks.push(remaining.slice(0, boundary).trim());
+    remaining = remaining.slice(boundary).trim();
   }
 
-  if (!groqModels.has(model)) {
-    throw new HttpsError("invalid-argument", "Modele Groq non autorise.");
+  if (remaining) {
+    chunks.push(remaining);
   }
 
+  return chunks;
+}
+
+async function callGroqRequest({ apiKey, prompt, model, reasoningEffort, part }) {
   console.info("Groq generation started", {
     model,
     reasoningEffort,
     promptCharacters: prompt.length,
+    part,
   });
   const startedAt = Date.now();
   let response;
@@ -186,6 +215,7 @@ async function callGroq({ prompt, model, reasoningEffort }) {
       status: response.status,
       message: body.error?.message,
       promptCharacters: prompt.length,
+      part,
     });
     throw new HttpsError(
       response.status === 429
@@ -206,9 +236,76 @@ async function callGroq({ prompt, model, reasoningEffort }) {
     model,
     durationMs: Date.now() - startedAt,
     outputCharacters: outputText.length,
+    part,
   });
 
   return outputText;
+}
+
+async function callGroq({ prompt, model, reasoningEffort, task }) {
+  const apiKey = groqApiKey.value().trim();
+  if (!apiKey) {
+    throw new HttpsError(
+      "failed-precondition",
+      "GROQ_API_KEY n'est pas configuree.",
+    );
+  }
+
+  if (!groqModels.has(model)) {
+    throw new HttpsError("invalid-argument", "Modele Groq non autorise.");
+  }
+
+  const markerIndex = prompt.indexOf(sourceMarker);
+  if (
+    task !== "correction" ||
+    prompt.length <= groqChunkTargetCharacters ||
+    markerIndex < 0
+  ) {
+    return callGroqRequest({
+      apiKey,
+      prompt,
+      model,
+      reasoningEffort,
+      part: "1/1",
+    });
+  }
+
+  const instructions = prompt.slice(0, markerIndex);
+  const source = prompt.slice(markerIndex + sourceMarker.length);
+  const segmentDirective =
+    "\n\nMODE SEGMENT : corrige uniquement le segment fourni. Retourne seulement le texte corrige, sans titre, sans introduction, sans conclusion, sans liste de termes et sans commentaire. Ne resume rien.\n";
+  const maxSourceCharacters = Math.max(
+    4000,
+    groqChunkTargetCharacters - instructions.length - segmentDirective.length - sourceMarker.length,
+  );
+  const sourceChunks = splitSourceText(source, maxSourceCharacters);
+  const correctedChunks = [];
+
+  console.info("Groq long generation split", {
+    promptCharacters: prompt.length,
+    instructionCharacters: instructions.length,
+    sourceCharacters: source.length,
+    chunks: sourceChunks.length,
+    maxSourceCharacters,
+  });
+
+  for (const [index, sourceChunk] of sourceChunks.entries()) {
+    if (index > 0) {
+      await wait(groqChunkDelayMs);
+    }
+
+    correctedChunks.push(
+      await callGroqRequest({
+        apiKey,
+        prompt: `${instructions}${segmentDirective}${sourceMarker}${sourceChunk}`,
+        model,
+        reasoningEffort,
+        part: `${index + 1}/${sourceChunks.length}`,
+      }),
+    );
+  }
+
+  return correctedChunks.join("\n\n");
 }
 
 function validateCourseAudioUrl(audioUrl, storagePath) {
@@ -308,6 +405,8 @@ export const generatePipelineStep = onCall(
         ? request.data.model.trim()
         : config.defaultModel;
     const requestedReasoningEffort = request.data?.reasoningEffort;
+    const task =
+      typeof request.data?.task === "string" ? request.data.task.trim() : "";
     const reasoningEffort = reasoningEfforts.has(requestedReasoningEffort)
       ? requestedReasoningEffort
       : "medium";
@@ -318,7 +417,7 @@ export const generatePipelineStep = onCall(
     } else if (provider === "anthropic") {
       text = await callAnthropic({ prompt, model });
     } else {
-      text = await callGroq({ prompt, model, reasoningEffort });
+      text = await callGroq({ prompt, model, reasoningEffort, task });
     }
 
     return { text, provider, model };

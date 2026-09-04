@@ -21,6 +21,7 @@ const generatePipelineStep = httpsCallable<
     model: string;
     prompt: string;
     reasoningEffort?: AiReasoningEffort;
+    task?: string;
   },
   AiGenerationResult
 >(firebaseFunctions, "generatePipelineStep");
@@ -35,6 +36,7 @@ export async function generateWithAi(input: {
   model: string;
   prompt: string;
   reasoningEffort?: AiReasoningEffort;
+  task?: string;
 }) {
   const response = await generatePipelineStep(input);
 

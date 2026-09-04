@@ -502,6 +502,7 @@ export function TreatmentPage() {
         model: selectedModel.model,
         prompt,
         reasoningEffort: step.reasoningEffort,
+        task: step.key,
       });
       setResults((current) => ({ ...current, [step.key]: result.text }));
       setNotice(
@@ -1202,7 +1203,9 @@ export function TreatmentPage() {
                   </div>
                   {aiStep === step.key ? (
                     <p className="audio-operation" aria-live="polite">
-                      {step.title} en cours de génération. Garde cette page ouverte jusqu'à la fin.
+                      {step.key === "correction"
+                        ? "Correction longue en cours. L'app traite automatiquement le texte par segments ; cela peut prendre plusieurs minutes. Garde cette page ouverte."
+                        : `${step.title} en cours de génération. Garde cette page ouverte jusqu'à la fin.`}
                     </p>
                   ) : null}
                   {aiError && step.key !== "transcription" ? (
