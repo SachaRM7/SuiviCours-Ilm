@@ -24,7 +24,7 @@ const generatePipelineStep = httpsCallable<
     task?: string;
   },
   AiGenerationResult
->(firebaseFunctions, "generatePipelineStep");
+>(firebaseFunctions, "generatePipelineStep", { timeout: 540_000 });
 
 const transcribeCourseAudio = httpsCallable<
   { audioUrl: string; storagePath: string },
