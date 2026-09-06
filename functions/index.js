@@ -37,14 +37,14 @@ const whisperModel = "whisper-large-v3";
 const whisperEndpoint = "https://api.groq.com/openai/v1/audio/transcriptions";
 const sourceMarker = "\n\n---\n\nCONTENU SOURCE\n\n";
 const groqChunkTargetCharacters = 8000;
-// Un segment de N caracteres coute environ N/3.2 tokens en entree et autant en
-// sortie, plus le raisonnement du modele. A 6000 caracteres une requete pese
-// environ 5000 tokens : sous la limite de sortie, et compatible avec une
-// requete par minute sur le Free Tier. Monter cette valeur accelere les longues
-// corrections mais rapproche du plafond de tokens par minute.
-const groqCorrectionChunkCharacters = 6000;
+// Le Free Tier Groq plafonne la sortie a 1000 tokens par minute (OTPM) et
+// refuse la requete sur la valeur *demandee*, pas sur la consommation reelle :
+// max_completion_tokens ne peut donc pas depasser 1000 sur ce palier.
+// Un segment de N caracteres produit environ N/3.2 tokens en sortie, donc
+// 2400 caracteres tiennent dans ce budget avec de la marge.
+const groqCorrectionChunkCharacters = 2400;
 const groqChunkDelayMs = 61000;
-const groqMaxCompletionTokens = 16384;
+const groqMaxCompletionTokens = 1000;
 const pipelineTasks = new Set(["correction", "synthese", "sources", "fiche", "image"]);
 
 function requireString(value, field) {
@@ -345,7 +345,10 @@ async function callGroq({ prompt, model, reasoningEffort, task }) {
         apiKey,
         prompt: `${instructions}${segmentDirective}${sourceMarker}${sourceChunk}`,
         model,
-        reasoningEffort,
+        // Les tokens de raisonnement sont decomptes du meme budget que la
+        // reponse : sur 1000 tokens, en laisser au raisonnement revient a
+        // tronquer le texte corrige, voire a le vider entierement.
+        reasoningEffort: "none",
         part: `${index + 1}/${sourceChunks.length}`,
       }),
     );
