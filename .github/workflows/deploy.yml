@@ -24,8 +24,13 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Installer les dependances
+      - name: Installer les dependances du front
         run: npm ci
+
+      - name: Installer les dependances des fonctions
+        # firebase-tools analyse les triggers en local avant de deployer :
+        # sans ces paquets, il ne peut pas charger functions/index.js.
+        run: npm ci --prefix functions
 
       - name: Restaurer les variables de build
         # Le front lit ses VITE_* au moment du build : sans ce fichier,
