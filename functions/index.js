@@ -190,6 +190,56 @@ function splitSourceText(source, maxCharacters) {
   return chunks;
 }
 
+// Le prompt de correction se termine par une section "SORTIE" qui reclame le
+// texte corrige PUIS un tableau de corrections et une ligne TERMES_NOUVEAUX.
+// Ce contrat vaut pour une correction en une passe ; applique a chaque segment
+// il fait produire treize rapports partiels colles bout a bout. On retire donc
+// cette section et on lui substitue le contrat propre au mode segment.
+const outputSectionPattern = /\n[ \t]*SORTIE\b[\s\S]*$/;
+
+const segmentDirective = [
+  "",
+  "",
+  "SORTIE — le texte corrige du segment, et rien d'autre.",
+  "- Pas de titre, pas d'introduction, pas de conclusion.",
+  "- Pas de tableau de corrections, pas de ligne TERMES_NOUVEAUX, pas de mention PARTIE.",
+  "- Pas de commentaire ni de raisonnement : ta reponse commence par le premier mot du segment corrige et se termine par le dernier.",
+  "- Corrige le segment sans le resumer ni le raccourcir.",
+  "",
+].join("\n");
+
+function buildSegmentInstructions(instructions) {
+  const trimmed = instructions.replace(outputSectionPattern, "").trimEnd();
+
+  return trimmed.length > 0 ? trimmed : instructions.trimEnd();
+}
+
+// Filet de securite : le modele peut ignorer le contrat et rajouter son rapport.
+// Tout ce qui suit le premier marqueur de rapport est retire du segment.
+const reportMarkers = [
+  /\n[ \t]*\|[^\n]*\bOriginal\b[^\n]*\|/,
+  /\n[ \t]*TERMES_NOUVEAUX[ \t]*:/,
+];
+
+function stripSegmentReport(text) {
+  let cut = text.length;
+
+  for (const marker of reportMarkers) {
+    const match = marker.exec(text);
+    if (match && match.index < cut) {
+      cut = match.index;
+    }
+  }
+
+  return text
+    .slice(0, cut)
+    // Le separateur qui introduisait le rapport n'a plus rien a introduire.
+    .replace(/\n[ \t]*-{3,}\s*$/, "")
+    // "PARTIE 1" est un reliquat du contrat en deux parties.
+    .replace(/^[ \t]*PARTIE[ \t]+\d+[ \t]*\n+/i, "")
+    .trim();
+}
+
 async function callGroqRequest({ apiKey, prompt, model, reasoningEffort, part }) {
   console.info("Groq generation started", {
     model,
@@ -319,10 +369,8 @@ async function callGroq({ prompt, model, reasoningEffort, task }) {
     });
   }
 
-  const instructions = prompt.slice(0, markerIndex);
+  const instructions = buildSegmentInstructions(prompt.slice(0, markerIndex));
   const source = prompt.slice(markerIndex + sourceMarker.length);
-  const segmentDirective =
-    "\n\nMODE SEGMENT : corrige uniquement le segment fourni. Retourne seulement le texte corrige, sans titre, sans introduction, sans conclusion, sans liste de termes et sans commentaire. Ne resume rien.\n";
   const maxSourceCharacters = groqCorrectionChunkCharacters;
   const sourceChunks = splitSourceText(source, maxSourceCharacters);
   const correctedChunks = [];
@@ -340,18 +388,28 @@ async function callGroq({ prompt, model, reasoningEffort, task }) {
       await wait(groqChunkDelayMs);
     }
 
-    correctedChunks.push(
-      await callGroqRequest({
-        apiKey,
-        prompt: `${instructions}${segmentDirective}${sourceMarker}${sourceChunk}`,
-        model,
-        // Les tokens de raisonnement sont decomptes du meme budget que la
-        // reponse : sur 1000 tokens, en laisser au raisonnement revient a
-        // tronquer le texte corrige, voire a le vider entierement.
-        reasoningEffort: "none",
+    const segment = await callGroqRequest({
+      apiKey,
+      prompt: `${instructions}${segmentDirective}${sourceMarker}${sourceChunk}`,
+      model,
+      // Les tokens de raisonnement sont decomptes du meme budget que la
+      // reponse : sur 1000 tokens, en laisser au raisonnement revient a
+      // tronquer le texte corrige, voire a le vider entierement.
+      reasoningEffort: "none",
+      part: `${index + 1}/${sourceChunks.length}`,
+    });
+    const cleaned = stripSegmentReport(segment);
+
+    if (cleaned.length < segment.length) {
+      console.warn("Groq segment report stripped", {
         part: `${index + 1}/${sourceChunks.length}`,
-      }),
-    );
+        removedCharacters: segment.length - cleaned.length,
+      });
+    }
+
+    if (cleaned) {
+      correctedChunks.push(cleaned);
+    }
   }
 
   return correctedChunks.join("\n\n");
