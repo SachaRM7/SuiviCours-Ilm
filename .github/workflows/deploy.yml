@@ -1,0 +1,47 @@
+name: Deploy
+
+# Depuis main : chaque push deploie automatiquement.
+# Depuis n'importe quelle branche : bouton "Run workflow" dans l'onglet Actions
+# de GitHub (utilisable depuis un telephone).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Un seul deploiement a la fois : deux pushes rapproches ne se marchent pas dessus.
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Installer les dependances
+        run: npm ci
+
+      - name: Restaurer les variables de build
+        # Le front lit ses VITE_* au moment du build : sans ce fichier,
+        # l'app compilee ne sait pas a quel projet Firebase se connecter.
+        run: printf '%s\n' "${{ secrets.ENV_FILE }}" > .env
+
+      - name: Verifier le code
+        run: npm run lint
+
+      - name: Construire le front
+        run: npm run build
+
+      - name: S'authentifier aupres de Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+
+      - name: Deployer
+        run: npx firebase-tools@14 deploy --only functions,hosting --project suivi-cours-ilm --non-interactive

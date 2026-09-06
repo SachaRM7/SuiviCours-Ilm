@@ -49,3 +49,26 @@ Options disponibles dans l'interface :
 - `Claude Sonnet 5` : recommandé pour les synthèses et l'analyse des sources.
 - `Claude Opus 4.8` : à garder pour les cours très difficiles ou les corrections
   manuelles exigeantes.
+
+## Deploiement automatique
+
+Le workflow `.github/workflows/deploy.yml` construit le front et deploie
+fonctions et hosting. Il se declenche a chaque push sur `main`, et
+manuellement depuis l'onglet Actions de GitHub pour n'importe quelle branche.
+
+Deux secrets GitHub sont necessaires (Settings > Secrets and variables >
+Actions) :
+
+- `ENV_FILE` : le contenu integral du fichier `.env` local, colle tel quel.
+  Le workflow le reecrit avant le build, car les variables `VITE_*` sont
+  injectees a la compilation.
+- `FIREBASE_SERVICE_ACCOUNT` : la cle JSON d'un compte de service Google Cloud
+  du projet `suivi-cours-ilm`, collee entierement.
+
+Le compte de service doit porter les roles `Editor`, `Firebase Admin` et
+`Service Account User` : le deploiement de fonctions gen2 touche Cloud
+Functions, Cloud Run, Cloud Build, Artifact Registry, Cloud Tasks et Secret
+Manager.
+
+Les secrets des fonctions (`GROQ_API_KEY`, `ALLOWED_UID`, etc.) restent poses
+dans Secret Manager et ne transitent pas par GitHub.
