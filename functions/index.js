@@ -37,7 +37,12 @@ const whisperModel = "whisper-large-v3";
 const whisperEndpoint = "https://api.groq.com/openai/v1/audio/transcriptions";
 const sourceMarker = "\n\n---\n\nCONTENU SOURCE\n\n";
 const groqChunkTargetCharacters = 8000;
-const groqCorrectionChunkCharacters = 2600;
+// Un segment de N caracteres coute environ N/3.2 tokens en entree et autant en
+// sortie, plus le raisonnement du modele. A 6000 caracteres une requete pese
+// environ 5000 tokens : sous la limite de sortie, et compatible avec une
+// requete par minute sur le Free Tier. Monter cette valeur accelere les longues
+// corrections mais rapproche du plafond de tokens par minute.
+const groqCorrectionChunkCharacters = 6000;
 const groqChunkDelayMs = 61000;
 const groqMaxCompletionTokens = 16384;
 const pipelineTasks = new Set(["correction", "synthese", "sources", "fiche", "image"]);
