@@ -39,6 +39,7 @@ const sourceMarker = "\n\n---\n\nCONTENU SOURCE\n\n";
 const groqChunkTargetCharacters = 8000;
 const groqCorrectionChunkCharacters = 2600;
 const groqChunkDelayMs = 61000;
+const groqMaxCompletionTokens = 16384;
 const pipelineTasks = new Set(["correction", "synthese", "sources", "fiche", "image"]);
 
 function requireString(value, field) {
@@ -203,7 +204,7 @@ async function callGroqRequest({ apiKey, prompt, model, reasoningEffort, part })
       body: JSON.stringify({
         model,
         messages: [{ role: "user", content: prompt }],
-        max_completion_tokens: 1000,
+        max_completion_tokens: groqMaxCompletionTokens,
         reasoning_effort: reasoningEffort,
       }),
     });
@@ -233,15 +234,52 @@ async function callGroqRequest({ apiKey, prompt, model, reasoningEffort, part })
     );
   }
 
-  const outputText = body.choices?.[0]?.message?.content?.trim();
+  const choice = body.choices?.[0];
+  const finishReason = choice?.finish_reason;
+  const outputText = choice?.message?.content?.trim();
+
   if (!outputText) {
-    throw new HttpsError("failed-precondition", "Reponse Groq vide.");
+    const usage = body.usage ?? {};
+    const reasoningTokens =
+      usage.completion_tokens_details?.reasoning_tokens ?? null;
+
+    console.error("Groq generation returned no content", {
+      model,
+      part,
+      finishReason,
+      promptCharacters: prompt.length,
+      completionTokens: usage.completion_tokens ?? null,
+      reasoningTokens,
+      maxCompletionTokens: groqMaxCompletionTokens,
+    });
+
+    if (finishReason === "length") {
+      throw new HttpsError(
+        "resource-exhausted",
+        `Groq a epuise son budget de ${groqMaxCompletionTokens} tokens (segment ${part}) sans produire de texte. Reduis la taille des segments ou baisse le niveau de raisonnement.`,
+      );
+    }
+
+    throw new HttpsError(
+      "failed-precondition",
+      `Reponse Groq vide (segment ${part}, arret : ${finishReason ?? "inconnu"}).`,
+    );
+  }
+
+  if (finishReason === "length") {
+    console.warn("Groq generation truncated", {
+      model,
+      part,
+      outputCharacters: outputText.length,
+      maxCompletionTokens: groqMaxCompletionTokens,
+    });
   }
 
   console.info("Groq generation completed", {
     model,
     durationMs: Date.now() - startedAt,
     outputCharacters: outputText.length,
+    finishReason,
     part,
   });
 
