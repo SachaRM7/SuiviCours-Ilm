@@ -8,8 +8,13 @@ Les clés API ne doivent jamais être placées dans `.env` Vite ni dans le navig
 ```bash
 npx firebase-tools functions:secrets:set OPENAI_API_KEY
 npx firebase-tools functions:secrets:set ANTHROPIC_API_KEY
+npx firebase-tools functions:secrets:set GROQ_API_KEY
+npx firebase-tools functions:secrets:set META_API_KEY
 npx firebase-tools functions:secrets:set ALLOWED_UID
 ```
+
+`META_API_KEY` n'est requis que pour transcrire avec Muse Voice Transcribe ;
+sans lui, Whisper reste disponible.
 
 `ALLOWED_UID` doit contenir l'UID Firebase Auth autorisé.
 
@@ -72,3 +77,26 @@ Manager.
 
 Les secrets des fonctions (`GROQ_API_KEY`, `ALLOWED_UID`, etc.) restent poses
 dans Secret Manager et ne transitent pas par GitHub.
+
+
+## Transcription audio
+
+L'etape 1 propose deux modeles, au choix dans l'ecran de traitement.
+
+| | Whisper Large V3 (Groq) | Muse Voice Transcribe (Meta) |
+|---|---|---|
+| Cout | Free Tier | ~0,18 $ par heure d'audio |
+| Sortie | un bloc de texte | tours de parole etiquetes `Locuteur A :` |
+| Vocabulaire | prompt de contexte | biais de mots-cles sur le vocabulaire du module |
+
+Whisper reste le defaut : une requete sans `provider` continue de passer par lui.
+
+Muse Voice Transcribe recoit en `keywords` les translitterations du vocabulaire
+deja valide pour le module, ce qui fixe les termes arabes des la transcription
+au lieu de les rattraper a l'etape de correction. La diarisation etiquette les
+locuteurs, ce que le prompt 1 reclame en demandant d'ignorer les echanges avec
+la salle.
+
+Le francais fait partie des 25 langues validees au lancement du modele ;
+l'arabe n'y est pas confirme, mais les cours sont en francais avec des termes
+arabes ponctuels, geres par le biais de mots-cles.

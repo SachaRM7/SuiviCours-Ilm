@@ -5046,3 +5046,57 @@ summary {
     padding: 5px 8px;
   }
 }
+.transcription-audio__provider {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.transcription-audio__provider-label {
+  color: var(--ink-soft);
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.transcription-audio__provider-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid var(--cream-deep);
+  border-radius: 8px;
+  background: var(--white);
+  cursor: pointer;
+  padding: 10px 11px;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease;
+}
+
+.transcription-audio__provider-option:hover {
+  border-color: var(--gold-pale);
+}
+
+.transcription-audio__provider-option--selected {
+  border-color: var(--green);
+  background: rgba(24, 53, 45, 0.06);
+}
+
+.transcription-audio__provider-option input {
+  margin-top: 3px;
+}
+
+.transcription-audio__provider-option strong {
+  display: block;
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.transcription-audio__provider-option small {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.35;
+  margin-top: 2px;
+}

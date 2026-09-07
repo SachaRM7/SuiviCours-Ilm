@@ -102,6 +102,23 @@ async function getVocabularyForModule(moduleId: string) {
     .join("\n");
 }
 
+// Les mots-cles envoyes au modele de transcription sont les translitterations
+// seules : la transcription produit du texte latin, pas de la graphie arabe.
+export async function getVocabularyKeywords(moduleId: string) {
+  const snapshot = await getDocs(collection(db, "vocabulaire"));
+  const tagPrefix = `#${moduleId}_C`;
+
+  return snapshot.docs
+    .map((doc) => doc.data())
+    .filter((entry) =>
+      Array.isArray(entry.tags)
+        ? entry.tags.some((tag: string) => tag.startsWith(tagPrefix))
+        : false,
+    )
+    .map((entry) => String(entry.translitteration ?? "").trim())
+    .filter((keyword) => keyword.length > 0);
+}
+
 export async function getValidatedSources(context: CourseContext) {
   const snapshot = await getDocs(
     collection(

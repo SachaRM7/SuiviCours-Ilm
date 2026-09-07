@@ -10,8 +10,11 @@ export type AiGenerationResult = {
   model: string;
 };
 
+export type TranscriptionProvider = "groq" | "meta";
+
 export type AudioTranscriptionResult = {
   text: string;
+  provider: TranscriptionProvider;
   model: string;
 };
 
@@ -27,9 +30,14 @@ const generatePipelineStep = httpsCallable<
 >(firebaseFunctions, "generatePipelineStep", { timeout: 540_000 });
 
 const transcribeCourseAudio = httpsCallable<
-  { audioUrl: string; storagePath: string },
+  {
+    audioUrl: string;
+    storagePath: string;
+    provider?: TranscriptionProvider;
+    keywords?: string[];
+  },
   AudioTranscriptionResult
->(firebaseFunctions, "transcribeCourseAudio");
+>(firebaseFunctions, "transcribeCourseAudio", { timeout: 540_000 });
 
 export async function generateWithAi(input: {
   provider: AiProvider;
@@ -46,6 +54,8 @@ export async function generateWithAi(input: {
 export async function transcribeWithAi(input: {
   audioUrl: string;
   storagePath: string;
+  provider?: TranscriptionProvider;
+  keywords?: string[];
 }) {
   const response = await transcribeCourseAudio(input);
 

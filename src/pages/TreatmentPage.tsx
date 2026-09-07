@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useAsync } from "../hooks/useAsync";
 import { useAiJobs } from "../hooks/useAiJobs";
 import { transcribeWithAi } from "../lib/aiRepository";
+import type { TranscriptionProvider } from "../lib/aiRepository";
 import { acknowledgeAiJob, queueAiGeneration } from "../lib/aiJobsRepository";
 import { getCloudState, saveCloudState } from "../lib/cloudStateRepository";
 import {
@@ -25,7 +26,7 @@ import {
   parseReferences,
   parseShortTitle,
 } from "../lib/pipelineParsers";
-import { buildPromptPayload } from "../lib/promptRepository";
+import { buildPromptPayload, getVocabularyKeywords } from "../lib/promptRepository";
 import type {
   ArtifactType,
   Course,
@@ -189,6 +190,23 @@ const steps: StepDefinition[] = [
   },
 ];
 
+const transcriptionProviderOptions: {
+  id: TranscriptionProvider;
+  label: string;
+  hint: string;
+}[] = [
+  {
+    id: "groq",
+    label: "Whisper Large V3",
+    hint: "Gratuit. Un seul bloc de texte, sans distinction des locuteurs.",
+  },
+  {
+    id: "meta",
+    label: "Muse Voice Transcribe",
+    hint: "Payant (~0,18 $/h). Separe les locuteurs et priorise le vocabulaire du module.",
+  },
+];
+
 function isUnlocked(course: Course, step: StepDefinition) {
   return !step.unlocksAfter || course.etapes[step.unlocksAfter].fait;
 }
@@ -286,6 +304,8 @@ export function TreatmentPage() {
     null,
   );
   const [audioProgress, setAudioProgress] = useState({ current: 0, total: 0 });
+  const [transcriptionProvider, setTranscriptionProvider] =
+    useState<TranscriptionProvider>("groq");
   const aiJobs = useAiJobs();
   const handledJobIds = useRef(new Set<string>());
 
@@ -580,12 +600,20 @@ export function TreatmentPage() {
     setAudioBusy("transcribe");
     setAudioProgress({ current: 0, total: audioParts.length });
     const transcribedParts: string[] = [];
+    // Le biais de mots-cles fixe les termes arabes des cours precedents des la
+    // transcription, au lieu de les rattraper a l'etape de correction.
+    const keywords =
+      transcriptionProvider === "meta" && data
+        ? await getVocabularyKeywords(data.module.slug)
+        : [];
 
     for (const [index, part] of audioParts.entries()) {
       setAudioProgress({ current: index + 1, total: audioParts.length });
       const transcription = await transcribeWithAi({
         audioUrl: part.url,
         storagePath: part.storagePath,
+        provider: transcriptionProvider,
+        keywords,
       });
       transcribedParts.push(transcription.text);
       setResults((current) => ({
@@ -595,7 +623,11 @@ export function TreatmentPage() {
     }
 
     setNotice(
-      `${audioParts.length} partie${audioParts.length > 1 ? "s" : ""} transcrite${audioParts.length > 1 ? "s" : ""} avec Whisper Large V3. Relis puis enregistre.`,
+      `${audioParts.length} partie${audioParts.length > 1 ? "s" : ""} transcrite${audioParts.length > 1 ? "s" : ""} avec ${
+        transcriptionProviderOptions.find(
+          (option) => option.id === transcriptionProvider,
+        )?.label ?? transcriptionProvider
+      }. Relis puis enregistre.`,
     );
   }
 
@@ -1122,6 +1154,38 @@ export function TreatmentPage() {
                           ))}
                         </ol>
                       ) : null}
+
+                      <div className="transcription-audio__provider">
+                        <span className="transcription-audio__provider-label">
+                          Modèle de transcription
+                        </span>
+                        {transcriptionProviderOptions.map((option) => (
+                          <label
+                            className={[
+                              "transcription-audio__provider-option",
+                              transcriptionProvider === option.id
+                                ? "transcription-audio__provider-option--selected"
+                                : "",
+                            ]
+                              .filter(Boolean)
+                              .join(" ")}
+                            key={option.id}
+                          >
+                            <input
+                              checked={transcriptionProvider === option.id}
+                              disabled={audioBusy !== null}
+                              name="transcription-provider"
+                              onChange={() => setTranscriptionProvider(option.id)}
+                              type="radio"
+                              value={option.id}
+                            />
+                            <span>
+                              <strong>{option.label}</strong>
+                              <small>{option.hint}</small>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
 
                       <div className="transcription-audio__actions">
                         {audioFiles.length > 0 ? (

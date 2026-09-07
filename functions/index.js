@@ -12,6 +12,7 @@ const firestore = getFirestore();
 const openaiApiKey = defineSecret("OPENAI_API_KEY");
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
 const groqApiKey = defineSecret("GROQ_API_KEY");
+const metaApiKey = defineSecret("META_API_KEY");
 const allowedUid = defineSecret("ALLOWED_UID");
 
 const providerConfig = {
@@ -35,6 +36,12 @@ const audioBucket = "suivi-cours-ilm.firebasestorage.app";
 const maxFreeAudioSize = 25 * 1024 * 1024;
 const whisperModel = "whisper-large-v3";
 const whisperEndpoint = "https://api.groq.com/openai/v1/audio/transcriptions";
+const museTranscribeModel = "muse-voice-transcribe-1.0";
+const museTranscribeEndpoint = "https://api.meta.ai/v1/asr/transcribe";
+const transcriptionProviders = new Set(["groq", "meta"]);
+// Le biais de mots-cles porte sur les termes arabes du module : au-dela d'une
+// centaine, la liste dilue le signal au lieu de l'affiner.
+const maxTranscriptionKeywords = 100;
 const sourceMarker = "\n\n---\n\nCONTENU SOURCE\n\n";
 const groqChunkTargetCharacters = 8000;
 // Le Free Tier Groq plafonne la sortie a 1000 tokens par minute (OTPM) et
@@ -686,12 +693,134 @@ export const processPipelineJob = onTaskDispatched(
     }
   },
 );
+// La diarisation renvoie un tableau de tours de parole. On les rassemble en
+// paragraphes etiquetes : le prompt de correction demande de ne garder que
+// l'enseignant, ce qui suppose de savoir qui parle.
+function formatDiarizedTranscript(body) {
+  const turns = Array.isArray(body.turns) ? body.turns : [];
+
+  if (turns.length === 0) {
+    return typeof body.text === "string" ? body.text.trim() : "";
+  }
+
+  const paragraphs = [];
+
+  for (const turn of turns) {
+    const text = typeof turn?.text === "string" ? turn.text.trim() : "";
+    if (!text) continue;
+
+    const speaker = typeof turn?.speaker === "string" ? turn.speaker : null;
+    const previous = paragraphs[paragraphs.length - 1];
+
+    // Un locuteur qui reprend la parole prolonge son paragraphe.
+    if (previous && previous.speaker === speaker) {
+      previous.text += ` ${text}`;
+      continue;
+    }
+
+    paragraphs.push({ speaker, text });
+  }
+
+  return paragraphs
+    .map(({ speaker, text }) => (speaker ? `Locuteur ${speaker} : ${text}` : text))
+    .join("\n\n")
+    .trim();
+}
+
+async function callMuseVoiceTranscribe({
+  audioBuffer,
+  contentType,
+  fileName,
+  keywords,
+}) {
+  const apiKey = metaApiKey.value().trim();
+  if (!apiKey) {
+    throw new HttpsError(
+      "failed-precondition",
+      "META_API_KEY n'est pas configuree.",
+    );
+  }
+
+  const form = new FormData();
+  form.append("file", new Blob([audioBuffer], { type: contentType }), fileName);
+  form.append("model", museTranscribeModel);
+  // Le cours est en francais ; les termes arabes sont geres par le biais de
+  // mots-cles, pas en declarant l'arabe comme langue principale.
+  form.append("languageBias", "fr");
+  form.append("mode", "DIARIZATION");
+
+  if (keywords.length > 0) {
+    form.append("keywords", keywords.join(","));
+  }
+
+  console.info("Muse transcription started", {
+    audioBytes: audioBuffer.length,
+    keywords: keywords.length,
+  });
+
+  let response;
+  try {
+    response = await fetch(museTranscribeEndpoint, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${apiKey}` },
+      body: form,
+    });
+  } catch (error) {
+    console.error("Muse transcription network failure", error);
+    throw new HttpsError(
+      "unavailable",
+      "Meta ne repond pas actuellement. Reessaie dans quelques instants.",
+    );
+  }
+
+  const body = await response.json();
+
+  if (!response.ok) {
+    console.error("Muse transcription failed", {
+      status: response.status,
+      message: body.error?.message,
+    });
+    throw new HttpsError(
+      response.status === 413 ? "invalid-argument" : "failed-precondition",
+      body.error?.message ?? "La transcription Meta a echoue.",
+    );
+  }
+
+  const text = formatDiarizedTranscript(body);
+  if (!text) {
+    throw new HttpsError("internal", "La transcription Meta est vide.");
+  }
+
+  console.info("Muse transcription completed", { outputCharacters: text.length });
+
+  return text;
+}
+
+function normalizeKeywords(value) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const seen = new Set();
+
+  for (const entry of value) {
+    if (typeof entry !== "string") continue;
+    const keyword = entry.trim();
+    // Une virgule couperait le terme en deux dans la liste envoyee.
+    if (!keyword || keyword.includes(",")) continue;
+    seen.add(keyword);
+    if (seen.size >= maxTranscriptionKeywords) break;
+  }
+
+  return [...seen];
+}
+
 export const transcribeCourseAudio = onCall(
   {
     region: "europe-west1",
     timeoutSeconds: 540,
     memory: "1GiB",
-    secrets: [groqApiKey, allowedUid],
+    secrets: [groqApiKey, metaApiKey, allowedUid],
   },
   async (request) => {
     assertAllowed(request);
@@ -699,6 +828,12 @@ export const transcribeCourseAudio = onCall(
     const audioUrl = requireString(request.data?.audioUrl, "audioUrl");
     const storagePath = requireString(request.data?.storagePath, "storagePath");
     validateCourseAudioUrl(audioUrl, storagePath);
+
+    const requestedProvider = request.data?.provider;
+    const provider = transcriptionProviders.has(requestedProvider)
+      ? requestedProvider
+      : "groq";
+    const keywords = normalizeKeywords(request.data?.keywords);
 
     const storedFile = getStorage().bucket(audioBucket).file(storagePath);
     let metadata;
@@ -712,7 +847,7 @@ export const transcribeCourseAudio = onCall(
     if (!Number.isFinite(size) || size <= 0 || size > maxFreeAudioSize) {
       throw new HttpsError(
         "invalid-argument",
-        "Le Free Tier Groq accepte au maximum 25 Mo par fichier audio.",
+        "Chaque partie audio doit peser au maximum 25 Mo.",
       );
     }
 
@@ -728,11 +863,18 @@ export const transcribeCourseAudio = onCall(
       throw new HttpsError("internal", "Impossible de lire le fichier audio stocke.");
     }
 
-    const text = await callGroqWhisper({
+    const audioFile = {
       audioBuffer,
       contentType: metadata.contentType,
       fileName: storagePath.split("/").pop() ?? "cours-audio.mp3",
-    });
-    return { text, model: whisperModel };
+    };
+
+    if (provider === "meta") {
+      const text = await callMuseVoiceTranscribe({ ...audioFile, keywords });
+      return { text, provider, model: museTranscribeModel };
+    }
+
+    const text = await callGroqWhisper(audioFile);
+    return { text, provider, model: whisperModel };
   },
 );
