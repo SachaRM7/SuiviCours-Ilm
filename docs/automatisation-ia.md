@@ -9,6 +9,7 @@ Les clés API ne doivent jamais être placées dans `.env` Vite ni dans le navig
 npx firebase-tools functions:secrets:set OPENAI_API_KEY
 npx firebase-tools functions:secrets:set ANTHROPIC_API_KEY
 npx firebase-tools functions:secrets:set GROQ_API_KEY
+npx firebase-tools functions:secrets:set OPENCODE_API_KEY
 npx firebase-tools functions:secrets:set META_API_KEY
 npx firebase-tools functions:secrets:set ALLOWED_UID
 ```
@@ -31,6 +32,9 @@ npx firebase-tools deploy --only functions
 
 Le front utilise la région `europe-west1`, identique à celle de la fonction.
 
+`OPENCODE_API_KEY` alimente les générations de texte via les endpoints OpenCode
+Go. `GROQ_API_KEY` reste nécessaire pour la transcription Whisper.
+
 ## Choix des modèles
 
 La page `/cours/:id/traitement` propose trois modèles à chaque étape
@@ -40,20 +44,25 @@ mais il reste possible de choisir un autre modèle avant de lancer la générati
 Les prompts restent administrables depuis `/prompts` pour modifier les consignes.
 Le choix effectif du modèle se fait dans la page de traitement.
 
-Recommandations par défaut :
+Recommandations OpenCode Go par défaut :
 
-- correction : `openai` / `gpt-5.6-luna`
-- synthèse : `anthropic` / `claude-sonnet-5-20260715`
-- sources : `anthropic` / `claude-sonnet-5-20260715`
-- fiche : `openai` / `gpt-5.6-luna`
-- prompt image : `openai` / `gpt-5.6-luna`
+- correction : `opencode` / `qwen3.8-max`
+- synthèse : `opencode` / `glm-5.3`
+- sources : `opencode` / `qwen3.8-max`
+- fiche : `opencode` / `qwen3.8-flash`
+- prompt image : `opencode` / `qwen3.8-flash`
 
 Options disponibles dans l'interface :
 
-- `GPT-5.6 Luna` : bon choix par défaut pour les étapes régulières et le coût.
-- `Claude Sonnet 5` : recommandé pour les synthèses et l'analyse des sources.
-- `Claude Opus 4.8` : à garder pour les cours très difficiles ou les corrections
-  manuelles exigeantes.
+- `Qwen 3.8 Max` : correction fidèle, contenu long, français et termes arabes.
+- `GLM-5.3` : synthèses structurées et hiérarchisées.
+- `Qwen 3.8 Flash` : fiches et prompts image plus courts et rapides.
+
+Le serveur utilise les endpoints `/zen/go/v1/messages` et
+`/zen/go/v1/chat/completions`, avec un identifiant de session stable par cours.
+Les limites de sortie sont adaptées à chaque étape : 16 000 tokens pour une
+correction, 8 000 pour une synthèse ou des sources, 5 000 pour une fiche et
+3 000 pour un prompt image.
 
 ## Deploiement automatique
 

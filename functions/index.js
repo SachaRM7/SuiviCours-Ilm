@@ -1,6 +1,7 @@
 import { defineSecret } from "firebase-functions/params";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { onTaskDispatched } from "firebase-functions/v2/tasks";
+import { createHash } from "node:crypto";
 import { initializeApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getFunctions } from "firebase-admin/functions";
@@ -12,6 +13,7 @@ const firestore = getFirestore();
 const openaiApiKey = defineSecret("OPENAI_API_KEY");
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
 const groqApiKey = defineSecret("GROQ_API_KEY");
+const openCodeApiKey = defineSecret("OPENCODE_API_KEY");
 const metaApiKey = defineSecret("META_API_KEY");
 const allowedUid = defineSecret("ALLOWED_UID");
 
@@ -28,9 +30,21 @@ const providerConfig = {
     defaultModel: "qwen/qwen3.8-27b",
     endpoint: "https://api.groq.com/openai/v1/chat/completions",
   },
+  opencode: {
+    defaultModel: "qwen3.8-max",
+  },
 };
 
 const groqModels = new Set([providerConfig.groq.defaultModel]);
+const openCodeModels = new Map([
+  ["qwen3.8-max", "messages"],
+  ["qwen3.8-flash", "messages"],
+  ["glm-5.3", "chat"],
+]);
+const openCodeEndpoints = {
+  chat: "https://opencode.ai/zen/go/v1/chat/completions",
+  messages: "https://opencode.ai/zen/go/v1/messages",
+};
 const reasoningEfforts = new Set(["none", "low", "medium", "high"]);
 const audioBucket = "suivi-cours-ilm.firebasestorage.app";
 const maxFreeAudioSize = 25 * 1024 * 1024;
@@ -155,6 +169,93 @@ async function callAnthropic({ prompt, model }) {
 
   if (!outputText) {
     throw new HttpsError("internal", "Réponse Anthropic vide.");
+  }
+
+  return outputText;
+}
+
+function getOpenCodeSession(uid, courseId) {
+  return createHash("sha256")
+    .update(`${uid}:${courseId || "direct"}`)
+    .digest("hex")
+    .slice(0, 32);
+}
+
+async function parseOpenCodeResponse(response) {
+  const rawBody = await response.text();
+  let body;
+
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    body = {};
+  }
+
+  if (!response.ok) {
+    const message =
+      body.error?.message || body.message || rawBody || "Erreur OpenCode Go.";
+    throw new HttpsError(
+      response.status === 429 ? "resource-exhausted" : "failed-precondition",
+      message,
+    );
+  }
+
+  return body;
+}
+
+function getOpenCodeMaxTokens(task) {
+  if (task === "correction") return 16000;
+  if (task === "synthese" || task === "sources") return 8000;
+  if (task === "fiche") return 5000;
+  return 3000;
+}
+
+async function callOpenCode({ prompt, model, sessionId, task }) {
+  const apiKey = openCodeApiKey.value().trim();
+  if (!apiKey) {
+    throw new HttpsError(
+      "failed-precondition",
+      "OPENCODE_API_KEY n'est pas configuree.",
+    );
+  }
+
+  const protocol = openCodeModels.get(model);
+  if (!protocol) {
+    throw new HttpsError("invalid-argument", "Modele OpenCode Go non autorise.");
+  }
+
+  const headers = {
+    "Content-Type": "application/json",
+    "User-Agent": "suivi-cours-ilm-agent/1.0",
+    "x-opencode-session": sessionId,
+  };
+  if (protocol === "messages") {
+    headers["x-api-key"] = apiKey;
+    headers["anthropic-version"] = "2023-06-01";
+  } else {
+    headers.Authorization = `Bearer ${apiKey}`;
+  }
+
+  const response = await fetch(openCodeEndpoints[protocol], {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      model,
+      max_tokens: getOpenCodeMaxTokens(task),
+      messages: [{ role: "user", content: prompt }],
+    }),
+  });
+  const body = await parseOpenCodeResponse(response);
+  const outputText =
+    protocol === "messages"
+      ? body.content
+          ?.map((part) => (part.type === "text" ? part.text : ""))
+          .join("")
+          .trim()
+      : body.choices?.[0]?.message?.content?.trim();
+
+  if (!outputText) {
+    throw new HttpsError("internal", "Reponse OpenCode Go vide.");
   }
 
   return outputText;
@@ -440,12 +541,16 @@ function normalizeGenerationRequest(data) {
     ? requestedReasoningEffort
     : "medium";
   const task = typeof data?.task === "string" ? data.task.trim() : "";
+  const sessionId =
+    typeof data?.sessionId === "string" && data.sessionId.trim()
+      ? data.sessionId.trim()
+      : "suivi-cours-ilm";
 
-  return { provider, prompt, model, reasoningEffort, task };
+  return { provider, prompt, model, reasoningEffort, task, sessionId };
 }
 
 async function runGeneration(data) {
-  const { provider, prompt, model, reasoningEffort, task } =
+  const { provider, prompt, model, reasoningEffort, task, sessionId } =
     normalizeGenerationRequest(data);
   let text;
 
@@ -453,6 +558,8 @@ async function runGeneration(data) {
     text = await callOpenAI({ prompt, model });
   } else if (provider === "anthropic") {
     text = await callAnthropic({ prompt, model });
+  } else if (provider === "opencode") {
+    text = await callOpenCode({ prompt, model, sessionId, task });
   } else {
     text = await callGroq({ prompt, model, reasoningEffort, task });
   }
@@ -538,11 +645,14 @@ export const generatePipelineStep = onCall(
     region: "europe-west1",
     timeoutSeconds: 540,
     memory: "1GiB",
-    secrets: [openaiApiKey, anthropicApiKey, groqApiKey, allowedUid],
+    secrets: [openaiApiKey, anthropicApiKey, groqApiKey, openCodeApiKey, allowedUid],
   },
   async (request) => {
     assertAllowed(request);
-    return runGeneration(request.data);
+    return runGeneration({
+      ...request.data,
+      sessionId: getOpenCodeSession(request.auth.uid, request.data?.courseId),
+    });
   },
 );
 
@@ -573,6 +683,7 @@ export const startPipelineJob = onCall(
 
     await jobRef.set({
       ...generation,
+      sessionId: getOpenCodeSession(uid, courseId),
       courseId,
       courseTitle,
       stepTitle,
@@ -610,7 +721,7 @@ export const processPipelineJob = onTaskDispatched(
     memory: "1GiB",
     retryConfig: { maxAttempts: 1 },
     rateLimits: { maxConcurrentDispatches: 1 },
-    secrets: [openaiApiKey, anthropicApiKey, groqApiKey, allowedUid],
+    secrets: [openaiApiKey, anthropicApiKey, groqApiKey, openCodeApiKey, allowedUid],
   },
   async (request) => {
     const uid = requireString(request.data?.uid, "uid");

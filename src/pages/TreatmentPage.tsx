@@ -50,7 +50,7 @@ type StepDefinition = {
   reasoningEffort?: AiReasoningEffort;
 };
 
-type AiModelId = "qwen" | "luna" | "sonnet" | "opus";
+type AiModelId = "qwen-max" | "qwen-flash" | "glm";
 
 type AiModelOption = {
   id: AiModelId;
@@ -84,32 +84,25 @@ function emptyResults(): Record<StepKey, string> {
 
 const aiModelOptions: AiModelOption[] = [
   {
-    id: "qwen",
-    label: "Qwen 3.8 27B",
-    provider: "groq",
-    model: "qwen/qwen3.8-27b",
-    tone: "Rapide sur Groq, raisonnement adapté",
+    id: "qwen-max",
+    label: "Qwen 3.8 Max",
+    provider: "opencode",
+    model: "qwen3.8-max",
+    tone: "Précis, multilingue et adapté aux contenus longs",
   },
   {
-    id: "luna",
-    label: "GPT-5.6 Luna",
-    provider: "openai",
-    model: "gpt-5.6-luna",
-    tone: "Rapide, propre, économique",
+    id: "qwen-flash",
+    label: "Qwen 3.8 Flash",
+    provider: "opencode",
+    model: "qwen3.8-flash",
+    tone: "Rapide pour condenser et mettre en forme",
   },
   {
-    id: "sonnet",
-    label: "Claude Sonnet 5",
-    provider: "anthropic",
-    model: "claude-sonnet-5-20260715",
-    tone: "Équilibre qualité/coût",
-  },
-  {
-    id: "opus",
-    label: "Claude Opus 4.8",
-    provider: "anthropic",
-    model: "claude-opus-4-8",
-    tone: "Pour les cas exigeants",
+    id: "glm",
+    label: "GLM-5.3",
+    provider: "opencode",
+    model: "glm-5.3",
+    tone: "Structuration claire des documents",
   },
 ];
 
@@ -133,8 +126,8 @@ const steps: StepDefinition[] = [
       "La transcription brute enregistrée à l'étape précédente est jointe automatiquement.",
     resultArtifactType: "transcription_corrigee",
     sourceArtifactType: "transcription_brute",
-    destination: "IA",
-    recommendedModelId: "qwen",
+    destination: "OpenCode Go",
+    recommendedModelId: "qwen-max",
     reasoningEffort: "low",
   },
   {
@@ -146,8 +139,8 @@ const steps: StepDefinition[] = [
     resultArtifactType: "synthese",
     sourceArtifactType: "transcription_corrigee",
     unlocksAfter: "correction",
-    destination: "IA",
-    recommendedModelId: "qwen",
+    destination: "OpenCode Go",
+    recommendedModelId: "glm",
     reasoningEffort: "medium",
   },
   {
@@ -158,8 +151,8 @@ const steps: StepDefinition[] = [
     supportHint: "À joindre au prompt : la synthèse du cours.",
     sourceArtifactType: "synthese",
     unlocksAfter: "synthese",
-    destination: "IA",
-    recommendedModelId: "qwen",
+    destination: "OpenCode Go",
+    recommendedModelId: "qwen-max",
     reasoningEffort: "high",
   },
   {
@@ -171,8 +164,8 @@ const steps: StepDefinition[] = [
     resultArtifactType: "fiche",
     sourceArtifactType: "synthese",
     unlocksAfter: "sources",
-    destination: "IA",
-    recommendedModelId: "qwen",
+    destination: "OpenCode Go",
+    recommendedModelId: "qwen-flash",
     reasoningEffort: "medium",
   },
   {
@@ -184,8 +177,8 @@ const steps: StepDefinition[] = [
     resultArtifactType: "prompt_image",
     sourceArtifactType: "fiche",
     unlocksAfter: "fiche",
-    destination: "IA",
-    recommendedModelId: "qwen",
+    destination: "OpenCode Go",
+    recommendedModelId: "qwen-flash",
     reasoningEffort: "medium",
   },
 ];
@@ -446,7 +439,11 @@ export function TreatmentPage() {
     }
 
     const modelId = selectedAiModels[step.key] ?? step.recommendedModelId;
-    return aiModelOptions.find((option) => option.id === modelId) ?? null;
+    return (
+      aiModelOptions.find((option) => option.id === modelId) ??
+      aiModelOptions.find((option) => option.id === step.recommendedModelId) ??
+      null
+    );
   }
 
   async function preparePrompt(step: StepDefinition) {

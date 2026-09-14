@@ -1,7 +1,7 @@
 import { httpsCallable } from "firebase/functions";
 import { firebaseFunctions } from "./firebase";
 
-export type AiProvider = "openai" | "anthropic" | "groq";
+export type AiProvider = "openai" | "anthropic" | "groq" | "opencode";
 export type AiReasoningEffort = "none" | "low" | "medium" | "high";
 
 export type AiGenerationResult = {
