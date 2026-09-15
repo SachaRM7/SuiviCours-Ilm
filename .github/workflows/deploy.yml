@@ -49,4 +49,6 @@ jobs:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
 
       - name: Deployer
+        env:
+          FUNCTIONS_DISCOVERY_TIMEOUT: 60
         run: npx firebase-tools@14 deploy --only functions,hosting --project suivi-cours-ilm --non-interactive
