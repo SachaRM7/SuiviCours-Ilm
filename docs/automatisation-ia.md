@@ -97,6 +97,7 @@ L'etape 1 propose deux modeles, au choix dans l'ecran de traitement.
 | Cout | Free Tier | ~0,18 $ par heure d'audio |
 | Sortie | un bloc de texte | tours de parole etiquetes `Locuteur A :` |
 | Vocabulaire | prompt de contexte | biais de mots-cles sur le vocabulaire du module |
+| Formats déposés | m4a, mp3 ou wav | m4a, mp3 ou wav, convertis automatiquement en WAV |
 
 Whisper reste le defaut : une requete sans `provider` continue de passer par lui.
 
@@ -104,8 +105,8 @@ Muse Voice Transcribe recoit en `keywords` les translitterations du vocabulaire
 deja valide pour le module, ce qui fixe les termes arabes des la transcription
 au lieu de les rattraper a l'etape de correction. La diarisation etiquette les
 locuteurs, ce que le prompt 1 reclame en demandant d'ignorer les echanges avec
-la salle.
+la salle. Le serveur convertit chaque depot en WAV mono PCM 24 kHz et le decoupe
+en segments de moins de 10 minutes, conformement aux limites de l'API Meta.
 
-Le francais fait partie des 25 langues validees au lancement du modele ;
-l'arabe n'y est pas confirme, mais les cours sont en francais avec des termes
-arabes ponctuels, geres par le biais de mots-cles.
+Le francais et l'arabe font partie des langues prises en charge. Ils sont tous
+les deux fournis a `languageBias` pour mieux gerer les changements de langue.

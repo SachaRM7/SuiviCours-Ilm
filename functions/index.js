@@ -1,7 +1,13 @@
 import { defineSecret } from "firebase-functions/params";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { onTaskDispatched } from "firebase-functions/v2/tasks";
+import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
+import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { promisify } from "node:util";
+import ffmpegPath from "ffmpeg-static";
 import { initializeApp } from "firebase-admin/app";
 import { FieldValue, getFirestore } from "firebase-admin/firestore";
 import { getFunctions } from "firebase-admin/functions";
@@ -9,6 +15,7 @@ import { getStorage } from "firebase-admin/storage";
 
 initializeApp();
 const firestore = getFirestore();
+const execFileAsync = promisify(execFile);
 
 const openaiApiKey = defineSecret("OPENAI_API_KEY");
 const anthropicApiKey = defineSecret("ANTHROPIC_API_KEY");
@@ -52,6 +59,7 @@ const whisperModel = "whisper-large-v3";
 const whisperEndpoint = "https://api.groq.com/openai/v1/audio/transcriptions";
 const museTranscribeModel = "muse-voice-transcribe-1.0";
 const museTranscribeEndpoint = "https://api.meta.ai/v1/asr/transcribe";
+const museSegmentSeconds = 570;
 const transcriptionProviders = new Set(["groq", "meta"]);
 // Le biais de mots-cles porte sur les termes arabes du module : au-dela d'une
 // centaine, la liste dilue le signal au lieu de l'affiner.
@@ -811,13 +819,15 @@ function formatDiarizedTranscript(body) {
   const turns = Array.isArray(body.turns) ? body.turns : [];
 
   if (turns.length === 0) {
-    return typeof body.text === "string" ? body.text.trim() : "";
+    const transcript = body.transcript ?? body.text;
+    return typeof transcript === "string" ? transcript.trim() : "";
   }
 
   const paragraphs = [];
 
   for (const turn of turns) {
-    const text = typeof turn?.text === "string" ? turn.text.trim() : "";
+    const turnText = turn?.transcript ?? turn?.text;
+    const text = typeof turnText === "string" ? turnText.trim() : "";
     if (!text) continue;
 
     const speaker = typeof turn?.speaker === "string" ? turn.speaker : null;
@@ -838,12 +848,71 @@ function formatDiarizedTranscript(body) {
     .trim();
 }
 
-async function callMuseVoiceTranscribe({
-  audioBuffer,
-  contentType,
-  fileName,
-  keywords,
-}) {
+async function convertAudioForMuse(audioBuffer) {
+  if (!ffmpegPath) {
+    throw new HttpsError(
+      "internal",
+      "Le convertisseur audio Muse n'est pas disponible.",
+    );
+  }
+
+  const workingDirectory = await mkdtemp(join(tmpdir(), "muse-audio-"));
+  const inputPath = join(workingDirectory, "input-audio");
+  const outputPattern = join(workingDirectory, "segment-%03d.wav");
+
+  try {
+    await writeFile(inputPath, audioBuffer);
+    await execFileAsync(
+      ffmpegPath,
+      [
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-i",
+        inputPath,
+        "-vn",
+        "-ac",
+        "1",
+        "-ar",
+        "24000",
+        "-c:a",
+        "pcm_s16le",
+        "-f",
+        "segment",
+        "-segment_time",
+        String(museSegmentSeconds),
+        "-reset_timestamps",
+        "1",
+        outputPattern,
+      ],
+      { maxBuffer: 4 * 1024 * 1024 },
+    );
+
+    const segmentNames = (await readdir(workingDirectory))
+      .filter((name) => name.endsWith(".wav"))
+      .sort();
+    if (segmentNames.length === 0) {
+      throw new Error("Aucun segment WAV n'a ete produit.");
+    }
+
+    return Promise.all(
+      segmentNames.map(async (name) => ({
+        audioBuffer: await readFile(join(workingDirectory, name)),
+        fileName: name,
+      })),
+    );
+  } catch (error) {
+    console.error("Muse audio conversion failed", error);
+    throw new HttpsError(
+      "invalid-argument",
+      "Impossible de convertir ce fichier audio pour Muse Voice Transcribe.",
+    );
+  } finally {
+    await rm(workingDirectory, { force: true, recursive: true });
+  }
+}
+
+async function callMuseSegment({ audioBuffer, fileName, keywords, part }) {
   const apiKey = metaApiKey.value().trim();
   if (!apiKey) {
     throw new HttpsError(
@@ -853,27 +922,35 @@ async function callMuseVoiceTranscribe({
   }
 
   const form = new FormData();
-  form.append("file", new Blob([audioBuffer], { type: contentType }), fileName);
-  form.append("model", museTranscribeModel);
-  // Le cours est en francais ; les termes arabes sont geres par le biais de
-  // mots-cles, pas en declarant l'arabe comme langue principale.
-  form.append("languageBias", "fr");
-  form.append("mode", "DIARIZATION");
-
-  if (keywords.length > 0) {
-    form.append("keywords", keywords.join(","));
-  }
+  const transcriptionRequest = {
+    model: museTranscribeModel,
+    audioEncoding: "WAV",
+    mode: "DIARIZATION",
+    languageBias: ["French", "Arabic"],
+    ...(keywords.length > 0 ? { keywords } : {}),
+  };
+  form.append(
+    "request",
+    new Blob([JSON.stringify(transcriptionRequest)], {
+      type: "application/json",
+    }),
+  );
+  form.append("audio", new Blob([audioBuffer], { type: "audio/wav" }), fileName);
 
   console.info("Muse transcription started", {
     audioBytes: audioBuffer.length,
     keywords: keywords.length,
+    part,
   });
 
   let response;
   try {
     response = await fetch(museTranscribeEndpoint, {
       method: "POST",
-      headers: { Authorization: `Bearer ${apiKey}` },
+      headers: {
+        Accept: "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
       body: form,
     });
   } catch (error) {
@@ -905,6 +982,27 @@ async function callMuseVoiceTranscribe({
   console.info("Muse transcription completed", { outputCharacters: text.length });
 
   return text;
+}
+
+async function callMuseVoiceTranscribe({ audioBuffer, keywords }) {
+  const segments = await convertAudioForMuse(audioBuffer);
+  const transcripts = [];
+
+  console.info("Muse audio prepared", {
+    inputBytes: audioBuffer.length,
+    segments: segments.length,
+  });
+
+  for (const [index, segment] of segments.entries()) {
+    const transcript = await callMuseSegment({
+      ...segment,
+      keywords,
+      part: `${index + 1}/${segments.length}`,
+    });
+    transcripts.push(transcript);
+  }
+
+  return transcripts.join("\n\n").trim();
 }
 
 function normalizeKeywords(value) {

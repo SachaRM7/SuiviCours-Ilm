@@ -196,7 +196,7 @@ const transcriptionProviderOptions: {
   {
     id: "meta",
     label: "Muse Voice Transcribe",
-    hint: "Payant (~0,18 $/h). Separe les locuteurs et priorise le vocabulaire du module.",
+    hint: "Payant (~0,18 $/h). Conversion automatique, locuteurs séparés et vocabulaire priorisé.",
   },
 ];
 
